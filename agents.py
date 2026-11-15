@@ -64,27 +64,37 @@ def run_reviewer_agent(form_data: dict, strategy: str, copy_content: str) -> str
 
 def generate_full_campaign(
     form_data: dict,
-    progress_callback: Optional[Callable[[str, int], None]] = None
+    progress_callback: Optional[Callable[..., None]] = None
 ) -> dict:
     """
     Orquestra a sequencia completa dos 3 agentes:
     1. Estrategista -> 2. Copywriter -> 3. Revisor
     Retorna o dicionario consolidado com todas as etapas intermediarias e finais.
+    Notifica o callback com eventos reais de início e conclusão de cada agente.
     """
+    def notify(stage: str, status: str, msg: str):
+        if progress_callback:
+            try:
+                progress_callback(stage, status, msg)
+            except TypeError:
+                progress_callback(msg, 1)
+
     # Etapa 1: Estrategista
-    if progress_callback:
-        progress_callback("Agente 1 (Estrategista) definindo o plano da campanha...", 1)
+    notify("strategist", "running", "Agente 1 (Estrategista) elaborando o plano de marketing...")
     strategy = run_strategist_agent(form_data)
+    notify("strategist", "completed", "Estratégia de marketing concluída.")
 
     # Etapa 2: Copywriter
-    if progress_callback:
-        progress_callback("Agente 2 (Copywriter) redigindo as peças para os canais selecionados...", 2)
+    notify("copywriter", "running", "Agente 2 (Copywriter) redigindo os textos para os canais selecionados...")
     copy_content = run_copywriter_agent(form_data, strategy)
+    notify("copywriter", "completed", "Textos dos canais criados com sucesso.")
 
     # Etapa 3: Revisor e Otimizador
-    if progress_callback:
-        progress_callback("Agente 3 (Revisor) refinando os textos e otimizando a versão final...", 3)
+    notify("reviewer", "running", "Agente 3 (Revisor) refinando os textos e otimizando a versão final...")
     review_content = run_reviewer_agent(form_data, strategy, copy_content)
+    notify("reviewer", "completed", "Revisão e versão final concluídas.")
+
+    notify("ready", "completed", "Campanha pronta para uso e exportação.")
 
     return {
         "form_data": form_data,
