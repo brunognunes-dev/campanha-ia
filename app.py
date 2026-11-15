@@ -77,7 +77,7 @@ with st.sidebar:
         3. 🔍 *Revisor e Otimizador*
         
         ---
-        *(Versão Acadêmica 2026)*
+        *(Programa Geração Tech — IA Generativa 2026)*
         """
     )
     if st.session_state.authenticated and st.secrets.get("DEMO_ACCESS_PASSWORD", ""):

@@ -11,8 +11,9 @@ Aplicativo web acadêmico desenvolvido para a criação automatizada, consistent
 
 ## 📌 1. Visão Geral e Contexto Acadêmico
 
-- **Curso:** Análise e Desenvolvimento de Sistemas
-- **Tema:** Inteligência Artificial Generativa e Automação de Processos
+- **Programa:** Geração Tech
+- **Curso:** Inteligência Artificial Generativa
+- **Tema:** Arquitetura Multiagente e Automação de Processos de Marketing
 - **Apresentação:** Novembro de 2026
 - **Objetivo:** Demonstrar a aplicação prática de agentes especializados de IA generativa colaborando em sequência para planejamento, redação e revisão de campanhas publicitárias, com posterior encaminhamento manual para revisão humana através de webhook automatizado.
 
