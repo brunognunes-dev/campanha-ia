@@ -1,0 +1,23 @@
+# Ambiente Virtual
+.venv/
+venv/
+ENV/
+
+# Streamlit - Credenciais e Configurações Locais
+.streamlit/secrets.toml
+
+# Variáveis de ambiente
+.env
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Sistema Operacional / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

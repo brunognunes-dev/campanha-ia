@@ -1,0 +1,177 @@
+{
+  "name": "Campanha IA — Encaminhamento para Revisao",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "campanha-ia-webhook",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-1",
+      "name": "Webhook Campanha",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "campanha-ia-webhook",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "credencial-header-auth",
+          "name": "Header Auth (X-Campanha-Token)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-product",
+              "leftValue": "={{ $json.body.product_service }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "cond-report",
+              "leftValue": "={{ $json.body.report_markdown }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-validacao",
+      "name": "Validar Dados Essenciais",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "toList": [
+          "seu-email-revisao@gmail.com"
+        ],
+        "subject": "=Campanha para Revisão: {{ $('Webhook Campanha').item.json.body.product_service }}",
+        "message": "={{ $('Webhook Campanha').item.json.body.report_markdown }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "node-gmail-send",
+      "name": "Gmail — Enviar para Revisão",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        700,
+        220
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "credencial-gmail-oauth2",
+          "name": "Conta Gmail de Revisao"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"sent\",\n  \"message\": \"Campanha encaminhada para revisão com sucesso\",\n  \"submission_id\": \"{{ $('Webhook Campanha').item.json.body.submission_id }}\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond-success",
+      "name": "Respond to Webhook (Sucesso 200)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        940,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"error\",\n  \"message\": \"Dados obrigatórios ausentes: product_service e report_markdown são necessários\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "node-respond-error",
+      "name": "Respond to Webhook (Erro 400)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        700,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Campanha": {
+      "main": [
+        [
+          {
+            "node": "Validar Dados Essenciais",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Dados Essenciais": {
+      "main": [
+        [
+          {
+            "node": "Gmail — Enviar para Revisão",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook (Erro 400)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail — Enviar para Revisão": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook (Sucesso 200)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
