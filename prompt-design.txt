@@ -1,0 +1,924 @@
+# PROMPT MESTRE — REDESIGN PROFISSIONAL DO MARKETFLOW AI
+
+## 1. PAPEL E OBJETIVO
+
+Atue como um **Senior UI/UX Designer, Frontend Engineer especializado em Streamlit e Python, Product Designer de aplicações SaaS e especialista em interfaces de IA generativa**.
+
+Sua missão é transformar a interface visual do projeto atualmente chamado **Campanha IA** em uma aplicação moderna, sofisticada e profissional denominada:
+
+# MarketFlow AI
+### Intelligent Marketing Campaign Studio
+
+O projeto já foi desenvolvido, integrado, testado e está funcionando.
+
+**Esta tarefa é exclusivamente uma modernização da interface, da experiência do usuário e da visualização dos processos existentes.**
+
+Não reconstrua a aplicação do zero.
+
+Não altere sua arquitetura, suas regras de negócio nem seus serviços de integração.
+
+Quero um resultado com aparência de uma plataforma SaaS moderna de IA generativa, inspirado na linguagem visual de produtos como AI Studio, com identidade própria.
+
+A interface deve transmitir:
+
+- Tecnologia e inteligência artificial.
+- Sofisticação e profissionalismo.
+- Clareza e organização.
+- Modernidade.
+- Facilidade de utilização.
+- Confiança na execução dos processos.
+
+A experiência deve ser bonita, mas também funcional, intuitiva, responsiva e adequada para uma demonstração acadêmica.
+
+---
+
+## 2. CONTEXTO DO PROJETO
+
+O MarketFlow AI é uma aplicação desenvolvida em:
+
+- Python.
+- Streamlit.
+- OpenRouter.
+- Três agentes especializados de IA.
+- n8n.
+- Webhooks HTTP.
+- GitHub.
+- Streamlit Community Cloud.
+
+Seu funcionamento consiste em:
+
+1. O usuário informa os dados de um produto ou serviço.
+2. O Agente Estrategista analisa as informações e desenvolve a estratégia da campanha.
+3. O Agente Copywriter cria conteúdos para os canais selecionados.
+4. O Agente Revisor avalia, otimiza e finaliza os conteúdos.
+5. O sistema apresenta os resultados.
+6. O usuário pode exportar os materiais.
+7. Após autorização, o usuário pode encaminhar a campanha para revisão por e-mail.
+8. A aplicação envia uma requisição HTTP ao webhook do n8n.
+9. O workflow n8n processa o recebimento e realiza a automação de envio.
+10. A aplicação apresenta o status retornado pela integração.
+
+**Importante:** o OpenRouter utiliza atualmente seleção automática de modelo, pois essa configuração foi adotada após a indisponibilidade do modelo anteriormente utilizado.
+
+Mantenha rigorosamente esse comportamento.
+
+Não fixe um novo modelo de linguagem.
+
+---
+
+## 3. REGRA FUNDAMENTAL: PRESERVAR O FUNCIONAMENTO
+
+Antes de modificar qualquer código:
+
+1. Inspecione o workspace completo.
+2. Identifique o arquivo principal da interface.
+3. Analise os módulos dos três agentes.
+4. Identifique a integração com o OpenRouter.
+5. Identifique a implementação do webhook e da automação n8n.
+6. Verifique o uso de `st.session_state`.
+7. Verifique a implementação dos downloads.
+8. Identifique como a aplicação apresenta erros e mensagens de sucesso.
+9. Examine a estrutura atual dos arquivos.
+10. Identifique as dependências existentes.
+
+Depois, apresente um plano resumido das alterações exclusivamente visuais.
+
+### Restrições obrigatórias
+
+NÃO:
+
+- Reescreva a lógica dos agentes.
+- Modifique os prompts de geração.
+- Altere a API do OpenRouter.
+- Substitua o roteamento automático de modelos.
+- Modifique as credenciais ou os Secrets.
+- Altere o contrato JSON com o n8n.
+- Modifique o endpoint do webhook.
+- Altere o workflow n8n.
+- Reconfigure a autenticação da integração.
+- Remova as exportações Markdown e TXT.
+- Remova validações existentes.
+- Remova o controle de acesso existente.
+- Introduza banco de dados.
+- Introduza MCP.
+- Migre para React ou Next.js.
+- Introduza frameworks complexos.
+- Adicione dependências sem justificativa.
+- Crie funcionalidades externas que não existiam anteriormente.
+- Simule resultados de APIs como se fossem reais.
+
+O sistema deverá continuar funcionando no Streamlit Community Cloud.
+
+**Preserve todo o backend. Modifique somente o necessário para aprimorar a interface e expor o progresso real das operações.**
+
+---
+
+## 4. NOVA IDENTIDADE VISUAL
+
+Adote o conceito:
+
+**Modern AI Studio — Premium Dark SaaS Interface**
+
+A aparência deverá lembrar uma plataforma profissional de inteligência artificial, com superfícies escuras, tipografia bem definida, detalhes luminosos e componentes elegantes.
+
+### 4.1. Paleta de cores
+
+Utilize como referência:
+
+- Background principal: `#090B13`
+- Background secundário: `#111525`
+- Superfícies e cartões: `#171C2E`
+- Bordas discretas: `#293047`
+- Texto principal: `#F8FAFC`
+- Texto secundário: `#98A2B3`
+- Roxo principal: `#8B5CF6`
+- Azul elétrico: `#3B82F6`
+- Ciano: `#22D3EE`
+- Verde de sucesso: `#22C55E`
+- Vermelho de erro: `#EF4444`
+
+Utilize gradientes sutis entre roxo e azul apenas em elementos de destaque.
+
+Evite excesso de brilho, sombras muito fortes ou efeitos que prejudiquem a legibilidade.
+
+### 4.2. Tipografia
+
+Use uma fonte moderna e legível, priorizando as opções disponíveis ou compatíveis com o Streamlit.
+
+Estabeleça hierarquia entre:
+
+- Nome da aplicação.
+- Títulos das seções.
+- Subtítulos.
+- Descrições.
+- Rótulos.
+- Indicadores.
+- Mensagens de status.
+
+Evite textos demasiadamente pequenos ou excesso de títulos grandes.
+
+### 4.3. Componentes
+
+Priorize:
+
+- Cards elegantes.
+- Bordas arredondadas.
+- Espaçamentos consistentes.
+- Ícones discretos.
+- Separadores sutis.
+- Estados visuais de carregamento.
+- Indicadores de sucesso e erro.
+- Botões com hierarquia clara.
+- Áreas com boa distribuição de conteúdo.
+
+Utilize componentes nativos do Streamlit sempre que possível.
+
+Use CSS personalizado apenas onde realmente agregar valor.
+
+Evite depender desnecessariamente de seletores internos instáveis do Streamlit.
+
+---
+
+## 5. ALTERAÇÃO DO NOME EXIBIDO
+
+Substitua o nome exibido da aplicação:
+
+**Campanha IA → MarketFlow AI**
+
+Atualize, quando existirem:
+
+- Título principal.
+- Título da aba do navegador.
+- Cabeçalho.
+- Sidebar.
+- Textos de boas-vindas.
+- Mensagens da interface que identifiquem a aplicação.
+- Textos de apresentação exibidos ao usuário.
+
+Utilize como subtítulo:
+
+**Intelligent Marketing Campaign Studio**
+
+E como descrição curta em português:
+
+**Crie, otimize e automatize campanhas de marketing com inteligência artificial.**
+
+### Atenção
+
+A mudança será prioritariamente da identidade exibida.
+
+Não renomeie automaticamente:
+
+- Repositório GitHub.
+- Diretório do projeto.
+- Arquivos Python.
+- Variáveis internas.
+- Endpoints.
+- Workflow n8n.
+- Nomes de Secrets.
+- Identificadores usados por integrações.
+
+Somente altere elementos internos se forem estritamente necessários e comprovadamente seguros.
+
+---
+
+## 6. ESTRUTURA VISUAL DA APLICAÇÃO
+
+Organize a interface em áreas bem definidas, utilizando o espaço horizontal disponível de maneira inteligente.
+
+### 6.1. Sidebar — Navegação e identidade
+
+Crie uma sidebar discreta e elegante.
+
+Exiba:
+
+- Nome MarketFlow AI.
+- Ícone relacionado a IA ou automação.
+- Subtítulo curto.
+- Indicação da etapa atual.
+- Uma breve representação dos recursos disponíveis.
+
+As seções visuais poderão ser:
+
+1. Configuração.
+2. Geração com IA.
+3. Resultados.
+4. Automação.
+
+Não implemente um sistema de páginas independente se isso comprometer o estado da aplicação.
+
+Utilize navegação simples, organizada e compatível com o funcionamento existente.
+
+Não crie controles sem função.
+
+### 6.2. Header principal
+
+Crie uma área superior com:
+
+**MarketFlow AI**
+
+*Intelligent Marketing Campaign Studio*
+
+Descrição:
+
+"Transforme informações sobre produtos e serviços em campanhas multicanal com o poder da inteligência artificial."
+
+Adicione um pequeno indicador visual de que o sistema utiliza agentes especializados.
+
+Não apresente indicadores fictícios de disponibilidade de APIs.
+
+---
+
+## 7. ÁREA DE CONFIGURAÇÃO DA CAMPANHA
+
+Transforme o formulário atual em uma experiência visual moderna.
+
+Organize os campos em grupos:
+
+### Grupo A — Informações do produto
+
+- Nome do produto ou serviço.
+- Descrição.
+- Diferenciais.
+
+### Grupo B — Estratégia e comunicação
+
+- Público-alvo.
+- Objetivo.
+- Tom de comunicação.
+- Chamada para ação.
+
+### Grupo C — Canais de distribuição
+
+- Instagram.
+- WhatsApp.
+- E-mail marketing.
+
+Apresente os canais de forma visualmente destacada, usando ícones quando possível.
+
+Utilize containers ou colunas para evitar formulários excessivamente longos.
+
+Não modifique os dados coletados nem os valores esperados pelo backend.
+
+### Botão principal
+
+Destaque o botão:
+
+**Gerar campanha com IA**
+
+Utilize um ícone apropriado, quando disponível.
+
+O botão deve ter destaque visual sem ocupar espaço desnecessário.
+
+Quando a geração começar, desabilite interações que possam provocar chamadas duplicadas, respeitando o comportamento do Streamlit.
+
+---
+
+## 8. VISUALIZAÇÃO DINÂMICA DO PROCESSO DE IA
+
+Este é um dos requisitos mais importantes do redesign.
+
+Quero que o usuário consiga **acompanhar visualmente o processamento da campanha**, em vez de visualizar apenas uma tela estática de carregamento.
+
+Implemente um painel chamado:
+
+# AI Workflow
+
+Subtítulo:
+
+**Acompanhe cada etapa da construção da sua campanha.**
+
+### 8.1. Fluxo visual
+
+Apresente o seguinte fluxo:
+
+**Entrada de dados → Estrategista → Copywriter → Revisor → Campanha pronta**
+
+Cada etapa deverá ter:
+
+- Ícone.
+- Nome.
+- Descrição curta.
+- Estado visual.
+- Indicador de progresso.
+
+### 8.2. Estados possíveis
+
+Utilize estados claros:
+
+**Pendente**
+- Cor neutra.
+- Indicador de que a etapa ainda não começou.
+
+**Em execução**
+- Destaque em roxo ou azul.
+- Spinner, animação discreta ou indicador de atividade.
+
+**Concluída**
+- Verde.
+- Ícone de confirmação.
+
+**Erro**
+- Vermelho.
+- Mensagem de erro objetiva.
+
+### 8.3. Comportamento real
+
+O painel deverá acompanhar a execução verdadeira do aplicativo.
+
+Exemplo:
+
+Quando o usuário clicar em "Gerar campanha com IA":
+
+1. Entrada de dados: concluída após validação.
+2. Estrategista: em execução durante a chamada correspondente.
+3. Estrategista: concluído após retorno válido.
+4. Copywriter: em execução.
+5. Copywriter: concluído após retorno válido.
+6. Revisor: em execução.
+7. Revisor: concluído após retorno válido.
+8. Campanha pronta: concluída depois da consolidação dos resultados.
+
+Se houver erro, mostre a etapa em que ocorreu.
+
+### Regra técnica essencial
+
+**Não invente progresso.**
+
+Não utilize animações com durações arbitrárias para simular o trabalho dos agentes.
+
+Não marque uma etapa como concluída antes de sua chamada real terminar.
+
+Não exiba porcentagens fictícias como 30%, 60% ou 90% se o backend não fornecer progresso mensurável.
+
+Prefira um indicador de etapas concluídas, como "2 de 3 agentes finalizados".
+
+### Implementação
+
+Avalie a possibilidade de utilizar:
+
+- `st.status`.
+- `st.spinner`.
+- `st.empty`.
+- `st.container`.
+- `st.progress`, apenas se a métrica representar etapas reais.
+- `st.session_state`.
+
+Se necessário, adicione um callback opcional de progresso à função de orquestração dos agentes.
+
+Esse callback poderá informar eventos de início, conclusão ou erro de cada agente.
+
+**A única alteração permitida na orquestração será a instrumentação de eventos de progresso, sem modificar a lógica de geração, os prompts, a ordem dos agentes ou o comportamento das chamadas.**
+
+Não faça chamadas duplicadas ao OpenRouter para alimentar o painel visual.
+
+---
+
+## 9. VISUALIZAÇÃO DO FLUXO N8N E WEBHOOK
+
+Crie um segundo painel visual chamado:
+
+# Automation Workflow
+
+Subtítulo:
+
+**Integração automatizada para encaminhamento da campanha.**
+
+Esse painel deverá aparecer quando a campanha estiver disponível ou na seção de encaminhamento.
+
+### 9.1. Fluxo de automação
+
+Apresente a seguinte sequência:
+
+**Campanha pronta → Autorização → Webhook → n8n → Envio de e-mail → Confirmação**
+
+Utilize um layout com nós conectados visualmente.
+
+Os componentes devem representar:
+
+**1. Campanha pronta**
+- Conteúdo disponível.
+- Aguardando decisão do usuário.
+
+**2. Autorização**
+- Confirmação manual do usuário.
+
+**3. Webhook**
+- Requisição HTTP enviada pela aplicação.
+
+**4. n8n**
+- Workflow responsável pelo tratamento e encaminhamento.
+
+**5. Envio de e-mail**
+- Etapa responsável pela entrega ao destinatário configurado.
+
+**6. Confirmação**
+- Resposta recebida da automação.
+
+### 9.2. Estados reais da automação
+
+Antes do envio:
+
+- Campanha pronta.
+- Aguardando autorização.
+
+Durante o envio:
+
+- Requisição HTTP em andamento.
+- Aguardando retorno da automação.
+
+Quando houver confirmação de sucesso:
+
+- Automação concluída.
+- E-mail encaminhado para revisão.
+
+Se ocorrer falha:
+
+- Exibir erro.
+- Preservar a campanha.
+- Permitir que o usuário compreenda o problema.
+
+### Limitação técnica obrigatória
+
+A aplicação Streamlit pode conhecer o momento em que envia a requisição e quando recebe a resposta HTTP.
+
+Ela **não consegue necessariamente acompanhar individualmente cada nó interno do n8n em tempo real**.
+
+Portanto:
+
+- Não simule que o nó Gmail terminou antes de receber confirmação real.
+- Não apresente execução detalhada dos nós internos como telemetria em tempo real sem que exista integração de observabilidade.
+- Utilize um estado agregado, como "Processando automação no n8n", enquanto aguarda a resposta.
+- Somente marque o envio como concluído após resposta de sucesso confiável.
+- Se ocorrer timeout, diferencie "resultado desconhecido" de "falha confirmada".
+- Não implemente polling ou endpoints adicionais de monitoramento apenas para fins visuais.
+
+O objetivo é oferecer uma experiência transparente e profissional, sem aumentar desnecessariamente a complexidade do sistema.
+
+---
+
+## 10. APRESENTAÇÃO DOS RESULTADOS
+
+A área dos resultados deverá ter aparência de um dashboard premium.
+
+Não apresente toda a campanha em um único bloco extenso.
+
+Organize os resultados em seções visuais.
+
+### 10.1. Cabeçalho de resultados
+
+Apresente:
+
+**Sua campanha está pronta**
+
+Uma descrição curta indicando que o conteúdo foi gerado e revisado.
+
+Mostre indicadores baseados em dados reais, como:
+
+- Quantidade de agentes executados com sucesso.
+- Quantidade de canais selecionados.
+- Estado da campanha.
+
+Não invente pontuações de desempenho, taxas de conversão, alcance esperado ou métricas comerciais.
+
+### 10.2. Estratégia
+
+Crie uma área visual:
+
+**Estratégia de Marketing**
+
+Organize, quando os dados existentes permitirem:
+
+- Objetivo.
+- Público-alvo.
+- Proposta de valor.
+- Mensagem central.
+- Diretrizes da campanha.
+
+Use cards ou containers para facilitar a leitura.
+
+### 10.3. Conteúdos por canal
+
+Crie uma área:
+
+**Conteúdos Multicanal**
+
+Utilize abas ou componentes equivalentes.
+
+**Instagram**
+- Identificação visual da plataforma.
+- Legenda.
+- Hashtags.
+- CTA.
+
+**WhatsApp**
+- Mensagem formatada para leitura.
+- CTA.
+
+**E-mail Marketing**
+- Assunto.
+- Prévia, se existir.
+- Corpo.
+- CTA.
+
+Mostre apenas os canais selecionados e efetivamente gerados.
+
+Os textos devem ser fáceis de ler, selecionar e copiar.
+
+Botões de cópia poderão ser adicionados se forem simples e não exigirem componentes complexos.
+
+### 10.4. Revisão e otimização
+
+Crie uma seção:
+
+**AI Review & Optimization**
+
+Apresente:
+
+- Avaliação textual existente.
+- Melhorias aplicadas.
+- Palavras-chave sugeridas.
+- Pontos de atenção.
+- Aviso sobre revisão humana.
+
+Não invente notas ou classificações inexistentes nos resultados.
+
+### 10.5. Exportação
+
+Crie um painel de ações:
+
+**Exportar Campanha**
+
+Preserve:
+
+- Download Markdown.
+- Download TXT.
+
+Melhore visualmente a apresentação dos botões.
+
+Não altere a geração dos arquivos nem seu conteúdo, exceto atualizações seguras na identificação visual da aplicação quando apropriado.
+
+---
+
+## 11. FEEDBACK E MICROINTERAÇÕES
+
+Implemente feedback visual consistente em todos os fluxos.
+
+### Geração
+
+Exibir claramente:
+
+- Início da geração.
+- Agente em execução.
+- Etapas concluídas.
+- Conclusão.
+- Erros.
+
+### Automação
+
+Exibir:
+
+- Aguardando autorização.
+- Enviando para automação.
+- Processando.
+- Sucesso confirmado.
+- Falha ou resultado incerto.
+
+### Exportação
+
+Disponibilizar botões evidentes e acessíveis.
+
+### Interações
+
+Use transições e efeitos apenas quando forem compatíveis com a plataforma.
+
+Evite:
+
+- Animações pesadas.
+- Efeitos contínuos desnecessários.
+- Pop-ups em excesso.
+- Componentes piscando.
+- Mensagens repetitivas.
+- Mudanças bruscas no layout durante a execução.
+
+Priorize fluidez, estabilidade e acessibilidade.
+
+---
+
+## 12. RESPONSIVIDADE
+
+A interface deverá funcionar adequadamente em:
+
+- Computadores desktop.
+- Notebooks.
+- Telas menores.
+- Navegadores modernos.
+
+No desktop, aproveite a largura horizontal para melhorar a disposição dos componentes.
+
+Em telas estreitas, evite colunas que tornem os campos ilegíveis.
+
+Os painéis de workflow devem continuar compreensíveis mesmo quando não houver espaço para exibir todos os nós horizontalmente.
+
+Prefira layouts que possam se reorganizar ou empilhar verticalmente.
+
+Não utilize larguras fixas que provoquem rolagem horizontal.
+
+---
+
+## 13. IMPLEMENTAÇÃO TÉCNICA
+
+### Prioridade 1 — Componentes nativos
+
+Utilize preferencialmente recursos do Streamlit:
+
+- `st.set_page_config`.
+- `st.sidebar`.
+- `st.container`.
+- `st.columns`.
+- `st.tabs`.
+- `st.status`.
+- `st.empty`.
+- `st.spinner`.
+- `st.progress`.
+- `st.session_state`.
+- `st.download_button`.
+- `st.button`.
+- `st.form`, se compatível com o fluxo atual.
+- Componentes de mensagens e estados.
+
+Verifique a compatibilidade desses recursos com a versão instalada.
+
+### Prioridade 2 — Tema do Streamlit
+
+Crie ou atualize:
+
+`.streamlit/config.toml`
+
+Configure um tema escuro coerente com a paleta definida.
+
+Esse arquivo não deve conter credenciais.
+
+Não modifique:
+
+`.streamlit/secrets.toml`
+
+### Prioridade 3 — CSS pontual
+
+Se necessário, utilize um arquivo CSS separado ou estilos cuidadosamente organizados.
+
+Use CSS para:
+
+- Identidade de marca.
+- Espaçamentos.
+- Cartões personalizados.
+- Destaques.
+- Gradientes sutis.
+- Elementos visuais dos fluxos.
+
+Prefira classes próprias para elementos personalizados.
+
+Evite sobrescrever amplamente componentes internos do Streamlit.
+
+### Prioridade 4 — Organização
+
+Se o arquivo principal estiver excessivamente grande, considere separar funções de apresentação em um módulo visual.
+
+Por exemplo:
+
+`ui_components.py`
+
+Crie esse arquivo apenas se a separação realmente melhorar a organização.
+
+Não fragmente o projeto em muitos módulos.
+
+---
+
+## 14. PRESERVAÇÃO DO ESTADO
+
+O redesign não pode causar regressões relacionadas ao estado da aplicação.
+
+Garanta que:
+
+1. O resultado não desapareça ao interagir com os botões.
+2. A exportação não provoque geração adicional.
+3. O encaminhamento para o n8n não execute os agentes novamente.
+4. A troca de abas não cause novas chamadas de API.
+5. A interface não perca a campanha após uma falha de automação.
+6. Os indicadores de progresso sejam atualizados corretamente.
+7. Um novo processo de geração reinicie apenas os estados relacionados à execução.
+8. Não existam chamadas duplicadas provocadas pelas reexecuções do Streamlit.
+
+Preserve o funcionamento atual do `st.session_state`.
+
+---
+
+## 15. CRITÉRIOS DE ACEITAÇÃO
+
+Considere o redesign concluído somente quando:
+
+### Identidade
+
+- O nome MarketFlow AI aparece corretamente.
+- A aba do navegador utiliza a nova identidade.
+- A interface possui estética moderna e escura.
+- As cores e tipografias são consistentes.
+
+### Usabilidade
+
+- O formulário continua funcionando.
+- Os campos estão organizados.
+- A interface é clara e responsiva.
+- Os botões são facilmente identificáveis.
+
+### Agentes
+
+- Os três agentes continuam funcionando.
+- O OpenRouter continua utilizando o roteamento automático existente.
+- A interface mostra a etapa ativa.
+- Etapas concluídas correspondem a execuções reais.
+- Erros são apresentados corretamente.
+- Não há chamadas duplicadas.
+
+### Automação
+
+- O webhook mantém seu comportamento.
+- O workflow n8n continua funcionando.
+- O envio exige autorização.
+- Os estados visuais são baseados em eventos reais.
+- O sistema confirma sucesso apenas após retorno confiável.
+- Falhas não apagam a campanha.
+
+### Resultados
+
+- Estratégia legível e organizada.
+- Conteúdos separados por canal.
+- Revisão e otimização bem apresentadas.
+- Exportação Markdown funcional.
+- Exportação TXT funcional.
+
+### Publicação
+
+- A aplicação inicia sem erros.
+- As dependências estão corretas.
+- Não existem credenciais no código-fonte.
+- O projeto continua compatível com Streamlit Community Cloud.
+- A versão publicada funciona adequadamente.
+
+---
+
+## 16. PLANO DE EXECUÇÃO
+
+Realize o redesign em etapas controladas.
+
+### ETAPA 1 — Inspeção e segurança
+
+- Inspecione os arquivos existentes.
+- Identifique os pontos de interface.
+- Identifique o fluxo de execução.
+- Preserve a versão funcional.
+- Crie uma branch Git específica para o redesign, se o repositório estiver configurado e não houver conflitos ou alterações pendentes.
+- Apresente um resumo das alterações planejadas.
+
+### ETAPA 2 — Identidade visual
+
+- Alterar o nome exibido para MarketFlow AI.
+- Criar tema escuro.
+- Atualizar cabeçalho.
+- Atualizar sidebar.
+- Padronizar cores, títulos e espaçamentos.
+
+### ETAPA 3 — Formulário
+
+- Reorganizar os campos.
+- Melhorar a disposição dos controles.
+- Destacar o botão de geração.
+- Preservar validações e valores enviados.
+
+### ETAPA 4 — Painel AI Workflow
+
+- Criar a representação visual dos agentes.
+- Implementar estados pendente, executando, concluído e erro.
+- Conectar os estados à execução real.
+- Validar a ordem das atualizações.
+
+### ETAPA 5 — Dashboard de resultados
+
+- Separar as informações em componentes.
+- Apresentar conteúdos por canal.
+- Organizar revisão e otimização.
+- Melhorar downloads.
+
+### ETAPA 6 — Painel Automation Workflow
+
+- Criar a representação de webhook e n8n.
+- Mostrar autorização e envio.
+- Apresentar os estados realmente observáveis.
+- Validar sucesso, erro e resultado incerto.
+
+### ETAPA 7 — Testes finais
+
+Teste a aplicação completa:
+
+1. Abrir o MarketFlow AI.
+2. Preencher o formulário.
+3. Gerar uma campanha.
+4. Acompanhar os três agentes visualmente.
+5. Visualizar os resultados.
+6. Exportar os arquivos.
+7. Autorizar o encaminhamento.
+8. Acompanhar a automação.
+9. Confirmar o e-mail recebido.
+10. Verificar que nenhuma funcionalidade anterior foi comprometida.
+
+Se uma alteração visual causar regressão, corrija-a antes de avançar.
+
+---
+
+## 17. COMO VOCÊ DEVE TRABALHAR
+
+Não faça apenas uma reformulação superficial.
+
+Quero uma evolução perceptível da interface, mas sem complexidade artificial.
+
+Antes de cada etapa:
+
+1. Explique o objetivo.
+2. Identifique os arquivos que serão alterados.
+3. Descreva resumidamente o resultado visual esperado.
+
+Durante a implementação:
+
+1. Faça mudanças pequenas e verificáveis.
+2. Preserve a lógica existente.
+3. Utilize os recursos adequados do Streamlit.
+4. Evite dependências desnecessárias.
+5. Execute os testes possíveis.
+
+Depois de cada etapa:
+
+1. Mostre o que mudou.
+2. Explique como verificar visualmente.
+3. Informe quais funcionalidades foram preservadas.
+4. Identifique eventuais problemas.
+5. Avance somente após a validação.
+
+**Não declare o redesign concluído sem testar a aplicação.**
+
+---
+
+## 18. INSTRUÇÃO FINAL
+
+Transforme o projeto existente no **MarketFlow AI**, com estética de um AI Studio moderno, interface dark premium, experiência profissional e visualização clara dos fluxos de IA generativa e automação.
+
+Quero que a apresentação do aplicativo permita compreender visualmente:
+
+**Informações do usuário → Estratégia → Criação de conteúdo → Revisão → Campanha final → Autorização → Webhook → Automação n8n → Confirmação de envio.**
+
+Cada etapa deve ter finalidade real e estados coerentes com as operações efetivamente executadas.
+
+O resultado deve ser visualmente sofisticado, didático e confiável.
+
+A modernização não pode comprometer o sistema já concluído.
+
+**Comece inspecionando o projeto atual, preservando a versão funcional e apresentando o plano de redesign. Execute depois a primeira etapa, valide-a e prossiga de maneira incremental.**
