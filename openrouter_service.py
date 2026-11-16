@@ -80,6 +80,14 @@ def _get_api_credentials() -> tuple[str, str]:
             "No ambiente local, configure em .streamlit/secrets.toml."
         )
 
+    # Diagnostico temporario: valida formato minimo da chave antes de usar
+    if len(api_key) < 20:
+        raise ValueError(
+            f"[DIAGNÓSTICO] A chave OPENROUTER_API_KEY parece inválida: "
+            f"comprimento={len(api_key)}, prefixo={repr(api_key[:6])}. "
+            "Verifique se foi copiada corretamente no painel de Secrets do Streamlit Cloud."
+        )
+
     return api_key, configured_model
 
 
@@ -210,7 +218,10 @@ def generate_chat_completion(
         or "unauthorized" in error_lower
         or "authenticationerror" in error_lower
     ):
-        raise RuntimeError("Erro de autenticação: Verifique se sua chave do OpenRouter é válida.")
+        raise RuntimeError(
+            f"Erro de autenticação: Verifique se sua chave do OpenRouter é válida. "
+            f"[Detalhe técnico: {error_msg[:200]}]"
+        )
     elif "429" in error_msg or "rate limit" in error_lower:
         raise RuntimeError("Limite de requisições atingido no OpenRouter. Aguarde alguns instantes e tente novamente.")
     else:
