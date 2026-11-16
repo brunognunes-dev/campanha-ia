@@ -67,13 +67,15 @@ def _get_api_credentials() -> tuple[str, str]:
     except Exception:
         pass
 
+    _PLACEHOLDER_VALUES = {"sua_chave_openrouter_aqui", "sua_chave_aqui", "sua_api_key_aqui", ""}
+
     # Fallback para arquivo local (ambiente de desenvolvimento)
-    if not api_key or api_key == "sua_chave_openrouter_aqui":
+    if not api_key or api_key in _PLACEHOLDER_VALUES:
         file_secrets = _read_secrets_file()
         api_key = file_secrets.get("OPENROUTER_API_KEY", "").strip()
         configured_model = file_secrets.get("OPENROUTER_MODEL", "auto").strip() or "auto"
 
-    if not api_key or api_key == "sua_chave_openrouter_aqui":
+    if not api_key or api_key in _PLACEHOLDER_VALUES:
         raise ValueError(
             "Chave de API do OpenRouter não encontrada. "
             "No Streamlit Cloud, configure 'OPENROUTER_API_KEY' na seção Secrets do painel do app. "
