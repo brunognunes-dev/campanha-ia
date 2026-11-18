@@ -1,0 +1,45 @@
+# MARKETFLOW AI 2.0 — MIGRAÇÃO PARA LANGGRAPH
+
+Atue como arquiteto de software especializado em LangGraph, Python e aplicações multiagentes.
+
+O MarketFlow AI 2.0 já possui a implementação de seus agentes especializados e a integração de pesquisa externa.
+
+Sua tarefa é migrar exclusivamente a orquestração atual para LangGraph, preservando as funcionalidades existentes.
+
+## Requisitos
+
+1. Inspecione `agents.py`, `prompts.py`, `openrouter_service.py`, `app.py`, `ui_components.py` e os testes atuais.
+2. Confirme o funcionamento e a quantidade real de agentes implementados.
+3. Utilize `StateGraph` com estado compartilhado.
+4. Organize os nós na sequência Pesquisador de Tendências, Copywriter, Especialista em SEO, Designer de Prompts de Imagem e Guardrails.
+5. Reutilize as funções existentes sempre que possível.
+6. Não reescreva prompts sem necessidade.
+7. Preserve `generate_chat_completion()` e o modo automático do OpenRouter.
+8. Preserve a função pública de geração utilizada pela interface ou implemente uma adaptação compatível.
+9. Preserve os callbacks de progresso que alimentam o AI Workflow do Streamlit.
+10. Garanta que cada etapa seja marcada como concluída somente após execução real.
+11. Faça os erros interromperem ou sinalizarem corretamente a execução.
+12. Não implemente ciclos infinitos, agentes autônomos desnecessários, memória persistente ou ferramentas adicionais.
+13. Não modifique n8n ou Google Sheets.
+14. Não altere a aplicação publicada.
+
+## Testes
+
+Crie testes automatizados com mocks para:
+
+- Ordem dos nós.
+- Transferência de estado.
+- Resultados do pesquisador.
+- Conteúdos do Copywriter.
+- Revisão SEO.
+- Prompts de imagem.
+- Guardrails.
+- Falha em qualquer etapa.
+- Callback de progresso.
+- Compatibilidade com a interface e relatórios.
+
+Execute os testes locais e apresente seus resultados.
+
+Não faça commit, push ou deploy automaticamente.
+
+Antes de implementar, apresente quais arquivos serão alterados e como a compatibilidade será preservada.

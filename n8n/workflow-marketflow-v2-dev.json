@@ -1,0 +1,293 @@
+{
+  "name": "MarketFlow AI 2.0 - Desenvolvimento",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "marketflow-v2-dev",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-dev",
+      "name": "Webhook Campanha",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "marketflow-v2-dev",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "credencial-header-auth-dev",
+          "name": "Header Auth (X-Campanha-Token)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-product-service",
+              "leftValue": "={{ $json.body?.product_service || $json.product_service }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "cond-report-markdown",
+              "leftValue": "={{ $json.body?.report_markdown || $json.report_markdown }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "cond-submission-id",
+              "leftValue": "={{ $json.body?.submission_id || $json.submission_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-validacao-dev",
+      "name": "Validar Dados Essenciais",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "MarketFlow AI - Campanhas DEV",
+          "mode": "name"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Campanhas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "submission_id": "={{ $('Webhook Campanha').item.json.body?.submission_id || $('Webhook Campanha').item.json.submission_id }}",
+            "submitted_at": "={{ $('Webhook Campanha').item.json.body?.submitted_at || $('Webhook Campanha').item.json.submitted_at }}",
+            "product_service": "={{ $('Webhook Campanha').item.json.body?.product_service || $('Webhook Campanha').item.json.product_service }}",
+            "objective": "={{ $('Webhook Campanha').item.json.body?.objective || $('Webhook Campanha').item.json.objective }}",
+            "channels": "={{ Array.isArray($('Webhook Campanha').item.json.body?.channels || $('Webhook Campanha').item.json.channels) ? ($('Webhook Campanha').item.json.body?.channels || $('Webhook Campanha').item.json.channels).join(', ') : ($('Webhook Campanha').item.json.body?.channels || $('Webhook Campanha').item.json.channels) }}",
+            "report_markdown": "={{ $('Webhook Campanha').item.json.body?.report_markdown || $('Webhook Campanha').item.json.report_markdown }}",
+            "validation_status": "approved",
+            "delivery_status": "pending"
+          }
+        },
+        "options": {}
+      },
+      "id": "node-sheets-append-dev",
+      "name": "Google Sheets — Registrar Campanha",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        700,
+        200
+      ],
+      "credentials": {
+        "googleSheetsOAuth2": {
+          "id": "credencial-google-sheets-oauth2",
+          "name": "Conta Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "toList": [
+          "seu-email-revisao@gmail.com"
+        ],
+        "subject": "=Campanha para Revisão: {{ $('Webhook Campanha').item.json.body?.product_service || $('Webhook Campanha').item.json.product_service }}",
+        "message": "={{ $('Webhook Campanha').item.json.body?.report_markdown || $('Webhook Campanha').item.json.report_markdown }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "node-gmail-send-dev",
+      "name": "Gmail — Enviar para Revisão",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        940,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "credencial-gmail-oauth2",
+          "name": "Conta Gmail de Revisao"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "MarketFlow AI - Campanhas DEV",
+          "mode": "name"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Campanhas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "delivery_status": "sent"
+          },
+          "matchingColumns": [
+            "submission_id"
+          ],
+          "matchingColumnsValues": {
+            "submission_id": "={{ $('Webhook Campanha').item.json.body?.submission_id || $('Webhook Campanha').item.json.submission_id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "node-sheets-update-dev",
+      "name": "Google Sheets — Confirmar Envio",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1180,
+        200
+      ],
+      "credentials": {
+        "googleSheetsOAuth2": {
+          "id": "credencial-google-sheets-oauth2",
+          "name": "Conta Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"sent\",\n  \"message\": \"Campanha registrada na planilha e encaminhada para revisão com sucesso!\",\n  \"submission_id\": \"{{ $('Webhook Campanha').item.json.body?.submission_id || $('Webhook Campanha').item.json.submission_id }}\",\n  \"delivery_status\": \"sent\",\n  \"validation_status\": \"approved\",\n  \"registered_sheet\": \"MarketFlow AI - Campanhas DEV\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond-success-dev",
+      "name": "Respond to Webhook (Sucesso 200)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1420,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"error\",\n  \"message\": \"Dados obrigatórios ausentes: product_service, report_markdown e submission_id são necessários\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "node-respond-error-dev",
+      "name": "Respond to Webhook (Erro 400)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        700,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Campanha": {
+      "main": [
+        [
+          {
+            "node": "Validar Dados Essenciais",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Dados Essenciais": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Registrar Campanha",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook (Erro 400)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets — Registrar Campanha": {
+      "main": [
+        [
+          {
+            "node": "Gmail — Enviar para Revisão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail — Enviar para Revisão": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Confirmar Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets — Confirmar Envio": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook (Sucesso 200)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

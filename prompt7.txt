@@ -1,0 +1,25 @@
+Integre o serviço `research_service.py`, já testado, ao primeiro agente do MarketFlow AI 2.0.
+
+Antes de alterar arquivos, inspecione o estado atual de `agents.py`, `prompts.py`, `app.py` e o formato do resultado da pesquisa.
+
+Transforme a responsabilidade do primeiro agente em Pesquisador de Tendências e Estrategista de Marketing, mantendo a arquitetura existente até a futura migração para LangGraph.
+
+Requisitos:
+
+1. A pesquisa externa deve acontecer antes da chamada do primeiro agente à LLM.
+2. O primeiro agente deve receber o briefing original e os resultados normalizados da pesquisa.
+3. A LLM deve separar fatos obtidos de fontes externas de recomendações inferidas.
+4. As URLs das fontes devem acompanhar os resultados.
+5. O Copywriter deve receber a estratégia fundamentada.
+6. A interface deve exibir as fontes consultadas.
+7. Os relatórios Markdown e TXT devem incluir a seção de pesquisa.
+8. O sistema deve informar claramente quando a pesquisa estiver indisponível.
+9. Nenhuma fonte pode ser inventada.
+10. Não altere o OpenRouter automático.
+11. Não altere n8n nem Google Sheets.
+12. Preserve o funcionamento dos demais agentes, inclusive o quarto, caso já esteja implementado.
+13. Atualize os testes com mocks.
+
+Execute os testes e apresente as alterações realizadas.
+
+Não implemente LangGraph nesta etapa. Não faça deploy.

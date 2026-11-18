@@ -1,0 +1,158 @@
+# TAREFA — CONFIGURAR E CORRIGIR A AUTOMAÇÃO N8N + GOOGLE SHEETS DO MARKETFLOW AI 2.0
+
+Atue como engenheiro sênior especializado em n8n, Python, APIs REST, webhooks, Google Sheets e integração de sistemas.
+
+Estou desenvolvendo a versão 2.0 do MarketFlow AI, que já possui integração funcional entre Streamlit, OpenRouter, n8n e Gmail.
+
+**Quero que você automatize o máximo possível da configuração e dos testes da integração n8n + Google Sheets, preservando integralmente a versão 1.0 publicada.**
+
+## 1. Contexto e problema
+
+Criei uma cópia do workflow original no n8n Cloud chamada:
+
+`MarketFlow AI 2.0 - Desenvolvimento`
+
+Configurei um webhook com caminho:
+
+`marketflow-v2-dev`
+
+Também comecei a adicionar nós Google Sheets para registrar campanhas e atualizar o estado do envio.
+
+Entretanto, estou enfrentando este problema:
+
+- O Postman retorna HTTP 200.
+- A resposta JSON esperada não aparece.
+- O primeiro nó Google Sheets não é executado.
+- Preciso identificar se o problema está no nó IF, nas conexões ou na configuração da resposta.
+
+## 2. Sua primeira tarefa: diagnosticar
+
+Inspecione os arquivos:
+
+- `n8n/workflow-campanha-ia.json`
+- `automation_service.py`
+- `app.py`
+- Arquivos de testes relacionados à automação.
+
+Verifique:
+
+1. Qual é o contrato JSON recebido pelo webhook.
+2. Quais campos são obrigatórios.
+3. Como o nó IF deve validar esses campos.
+4. Qual saída do IF deve executar o Google Sheets.
+5. Como o Gmail utiliza os dados recebidos.
+6. Como o Respond to Webhook deve devolver a confirmação.
+7. Quais alterações já foram feitas no workflow de desenvolvimento, caso ele esteja acessível.
+
+Não presuma que o JSON versionado no repositório representa exatamente o workflow atualmente hospedado no n8n Cloud.
+
+## 3. Configuração desejada
+
+O fluxo correto deverá ser:
+
+Webhook Campanha
+→ Validar Dados Essenciais
+→ Google Sheets - Registrar Campanha
+→ Gmail - Enviar para Revisão
+→ Google Sheets - Confirmar Envio
+→ Respond to Webhook - Sucesso 200
+
+A saída False do nó de validação deverá continuar retornando erro HTTP 400.
+
+### Google Sheets
+
+Documento:
+
+`MarketFlow AI - Campanhas DEV`
+
+Aba:
+
+`Campanhas`
+
+Colunas:
+
+- submission_id
+- submitted_at
+- product_service
+- objective
+- channels
+- report_markdown
+- validation_status
+- delivery_status
+
+O primeiro nó deve registrar a campanha com `delivery_status = pending`.
+
+O segundo nó deve localizar o registro pelo `submission_id` e atualizar para `delivery_status = sent` após a confirmação do Gmail.
+
+Use operações apropriadas do Google Sheets e confira os mapeamentos.
+
+## 4. Automação da configuração
+
+Verifique se existem ferramentas ou acesso autorizado que permitam interagir diretamente com minha instância n8n Cloud.
+
+Se houver uma API do n8n disponível e autorizada:
+
+- Inspecione exclusivamente o workflow de desenvolvimento.
+- Preserve o workflow de produção.
+- Prepare as alterações necessárias.
+- Apresente um resumo antes de modificar recursos remotos.
+- Nunca modifique ou exclua credenciais existentes.
+- Não publique nem ative mudanças remotas sem minha autorização.
+- Execute testes controlados depois que eu autorizar.
+
+Se não houver acesso à instância:
+
+- Gere um novo arquivo JSON importável do workflow de desenvolvimento.
+- Preserve as configurações funcionais do workflow original.
+- Inclua os dois nós Google Sheets e suas conexões.
+- Configure os campos e expressões que puderem ser definidos com segurança.
+- Não invente IDs de planilhas, credenciais ou valores secretos.
+- Explique exatamente quais campos eu precisarei configurar manualmente no n8n.
+
+Não afirme que modificou a instância n8n se apenas gerou um arquivo local.
+
+## 5. Tratamento de erros
+
+Garanta que:
+
+- Dados inválidos retornem HTTP 400.
+- A resposta de sucesso só seja emitida depois da confirmação das operações obrigatórias.
+- Falhas do Google Sheets não sejam apresentadas como sucesso.
+- Falhas do Gmail não sejam apresentadas como envio concluído.
+- Timeouts sejam tratados como resultados potencialmente incertos.
+- O sistema não repita automaticamente envios de e-mail.
+- Os resultados parciais sejam documentados.
+- O workflow original continue intacto.
+
+## 6. Testes
+
+Crie testes automatizados locais com mocks, sem consumir recursos externos.
+
+Prepare um JSON de exemplo para testar o webhook pelo Postman.
+
+Verifique a consistência das conexões do workflow e das expressões.
+
+Não envie e-mails reais, não altere planilhas reais e não execute testes de produção sem minha autorização.
+
+## 7. Segurança
+
+- Trabalhe somente na branch `feature/marketflow-v2`.
+- Não faça merge na branch `main`.
+- Não altere os Secrets do Streamlit publicado.
+- Não exponha tokens ou credenciais.
+- Não inclua dados sensíveis nos arquivos exportados.
+- Não modifique o workflow n8n da versão 1.0.
+
+## 8. Resultado esperado
+
+Ao final, quero receber:
+
+1. Diagnóstico do motivo pelo qual o Google Sheets não está sendo executado.
+2. Workflow n8n de desenvolvimento corrigido em JSON, caso não seja possível configurá-lo diretamente.
+3. Integração Google Sheets devidamente mapeada.
+4. Resposta JSON de sucesso e erro configurada.
+5. Testes automatizados locais.
+6. Instruções específicas para importar ou aplicar as alterações no n8n Cloud.
+7. Lista das únicas ações manuais que ainda precisarei realizar.
+
+**Comece inspecionando os arquivos existentes e verificando quais recursos do n8n estão realmente acessíveis. Não modifique a produção. Priorize corrigir o problema atual antes de acrescentar novas funcionalidades.**
