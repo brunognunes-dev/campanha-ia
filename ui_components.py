@@ -216,9 +216,8 @@ def render_app_header(is_demo: bool = False):
     st.divider()
 
 
-def render_sidebar(authenticated: bool = True, current_mode: str = "real") -> str:
+def render_sidebar(authenticated: bool = True, current_mode: str = "demo") -> str:
     """Renderiza a barra lateral com identidade, selecao de modo e navegacao do estudio."""
-    selected_mode = current_mode
     with st.sidebar:
         st.markdown(
             """
@@ -244,15 +243,46 @@ def render_sidebar(authenticated: bool = True, current_mode: str = "real") -> st
             """,
             unsafe_allow_html=True
         )
-        mode_idx = 0 if current_mode == "real" else 1
-        chosen_mode = st.radio(
+
+        current_mode = st.session_state.get("app_mode", "demo")
+        demo_label = "🎭 Modo Demonstração (100% Offline)"
+        real_label = "🚀 Modo Real (IA Generativa)"
+        options = [demo_label, real_label]
+        mode_idx = 0 if current_mode == "demo" else 1
+
+        selected_choice = st.radio(
             "Modo de Operação:",
-            options=["🚀 Modo Real (IA Generativa)", "🎭 Modo Demonstração (Offline)"],
+            options=options,
             index=mode_idx,
             label_visibility="collapsed",
-            key="sidebar_mode_selector"
+            key="sidebar_mode_radio_choice"
         )
-        selected_mode = "real" if "Modo Real" in chosen_mode else "demo"
+        chosen_mode = "demo" if selected_choice == demo_label else "real"
+
+        if chosen_mode != current_mode:
+            st.session_state.app_mode = chosen_mode
+            st.session_state.form_data = None
+            st.session_state.campaign_result = None
+            st.session_state.strategy = None
+            st.session_state.copy_content = None
+            st.session_state.review_and_final = None
+            st.session_state.image_prompts = None
+            st.session_state.research_data = None
+            st.session_state.guardrails_result = None
+            st.session_state.report_md = None
+            st.session_state.report_txt = None
+            st.session_state.automation_status = None
+            st.session_state.last_submission_sent = False
+            st.session_state.ai_workflow_states = {
+                "briefing": "pending",
+                "research": "pending",
+                "strategist": "pending",
+                "copywriter": "pending",
+                "reviewer": "pending",
+                "image_designer": "pending",
+                "ready": "pending"
+            }
+            st.rerun()
 
         st.markdown("---")
 
@@ -293,6 +323,8 @@ def render_sidebar(authenticated: bool = True, current_mode: str = "real") -> st
                 st.session_state.campaign_result = None
                 st.session_state.automation_status = None
                 st.rerun()
+
+    return chosen_mode
 
 
 def render_ai_workflow_panel(stage_states: dict):

@@ -42,7 +42,7 @@ if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
 if "app_mode" not in st.session_state:
-    st.session_state.app_mode = "real"
+    st.session_state.app_mode = "demo"
 
 if "form_data" not in st.session_state:
     st.session_state.form_data = None
@@ -156,7 +156,7 @@ def check_password() -> bool:
 check_password()
 
 # Renderiza a barra lateral personalizada e detecta o modo de operacao selecionado
-current_mode = st.session_state.get("app_mode", "real")
+current_mode = st.session_state.get("app_mode", "demo")
 selected_mode = render_sidebar(
     authenticated=st.session_state.authenticated,
     current_mode=current_mode
@@ -192,6 +192,98 @@ is_demo_mode = (st.session_state.app_mode == "demo")
 
 # Renderiza o cabecalho premium da marca com badge contextual
 render_app_header(is_demo=is_demo_mode)
+
+# Banner interativo de seleção de modo diretamente na tela principal
+col_mode_card, col_mode_btn = st.columns([2.8, 1.2])
+with col_mode_card:
+    if is_demo_mode:
+        st.markdown(
+            """
+            <div style="background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 10px; padding: 0.75rem 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.2rem;">🎭</span>
+                    <div>
+                        <strong style="color: #DDD6FE; font-size: 0.95rem;">Modo Demonstração Ativo (100% Offline)</strong>
+                        <div style="color: #94A3B8; font-size: 0.8rem; margin-top: 0.1rem;">
+                            Cenário Café Aurora • Não consome cota do OpenRouter • Sem chamadas externas
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            """
+            <div style="background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.35); border-radius: 10px; padding: 0.75rem 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.2rem;">🚀</span>
+                    <div>
+                        <strong style="color: #93C5FD; font-size: 0.95rem;">Modo Real Ativo (IA Generativa)</strong>
+                        <div style="color: #94A3B8; font-size: 0.8rem; margin-top: 0.1rem;">
+                            Chamadas reais ao OpenRouter e Tavily • Requer chave e cota disponível
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+with col_mode_btn:
+    if is_demo_mode:
+        if st.button("🚀 Alternar para Modo Real", use_container_width=True, help="Alterna para geração real via OpenRouter e Tavily"):
+            st.session_state.app_mode = "real"
+            st.session_state.form_data = None
+            st.session_state.campaign_result = None
+            st.session_state.strategy = None
+            st.session_state.copy_content = None
+            st.session_state.review_and_final = None
+            st.session_state.image_prompts = None
+            st.session_state.research_data = None
+            st.session_state.guardrails_result = None
+            st.session_state.report_md = None
+            st.session_state.report_txt = None
+            st.session_state.automation_status = None
+            st.session_state.last_submission_sent = False
+            st.session_state.ai_workflow_states = {
+                "briefing": "pending",
+                "research": "pending",
+                "strategist": "pending",
+                "copywriter": "pending",
+                "reviewer": "pending",
+                "image_designer": "pending",
+                "ready": "pending"
+            }
+            st.rerun()
+    else:
+        if st.button("🎭 Ativar Modo Demonstração", type="primary", use_container_width=True, help="Ativa modo 100% offline para testes e apresentações sem cota do OpenRouter"):
+            st.session_state.app_mode = "demo"
+            st.session_state.form_data = None
+            st.session_state.campaign_result = None
+            st.session_state.strategy = None
+            st.session_state.copy_content = None
+            st.session_state.review_and_final = None
+            st.session_state.image_prompts = None
+            st.session_state.research_data = None
+            st.session_state.guardrails_result = None
+            st.session_state.report_md = None
+            st.session_state.report_txt = None
+            st.session_state.automation_status = None
+            st.session_state.last_submission_sent = False
+            st.session_state.ai_workflow_states = {
+                "briefing": "pending",
+                "research": "pending",
+                "strategist": "pending",
+                "copywriter": "pending",
+                "reviewer": "pending",
+                "image_designer": "pending",
+                "ready": "pending"
+            }
+            st.rerun()
+
+st.markdown("<div style='margin-bottom: 0.8rem;'></div>", unsafe_allow_html=True)
 
 # ==============================================================================
 # SEÇÃO 1: CONFIGURAÇÃO DA CAMPANHA (MODO REAL OU MODO DEMONSTRAÇÃO)
@@ -302,7 +394,6 @@ if is_demo_mode:
 
             status_box.update(label="✨ Simulação do Modo Demonstração concluída com sucesso!", state="complete", expanded=False)
             st.success("✅ Resultados ilustrativos dos 4 agentes e validação dos Guardrails carregados!")
-            st.rerun()
 
 else:
     st.markdown("### 🎯 1. Briefing e Configuração da Campanha")
@@ -531,6 +622,49 @@ else:
                     safe_err_msg = sanitize_error_message(e)
                     st.error(f"Erro durante a execução do pipeline: {safe_err_msg}")
 
+                    # Fallback com 1 clique para Modo Demonstracao caso ocorra restricao de cota/OpenRouter
+                    st.markdown(
+                        """
+                        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 1rem; margin: 1rem 0;">
+                            <div style="font-weight: 700; color: #FCD34D; font-size: 0.95rem; margin-bottom: 0.3rem;">
+                                💡 Recomendação para Apresentação e Avaliação:
+                            </div>
+                            <div style="color: #CBD5E1; font-size: 0.85rem; line-height: 1.5; margin-bottom: 0.8rem;">
+                                Se a chamada à API do OpenRouter foi restrita por limites de taxa (HTTP 429), cota de tokens ou indisponibilidade de modelos externos, 
+                                utilize o <strong>Modo Demonstração (100% Offline)</strong>. Ele executa a arquitetura completa dos 4 agentes, 
+                                exibe o briefing, a pesquisa de mercado, a validação de Guardrails e a exportação sem realizar nenhuma chamada externa.
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    if st.button("🎭 Ativar Modo Demonstração Agora (Café Aurora — Offline)", type="primary", key="fallback_demo_mode_button"):
+                        st.session_state.app_mode = "demo"
+                        demo_campaign = run_demo_workflow_simulation()
+                        rep_md, rep_txt = build_demo_campaign_reports(demo_campaign)
+                        st.session_state.form_data = demo_campaign["form_data"]
+                        st.session_state.research_data = demo_campaign["research_data"]
+                        st.session_state.strategy = demo_campaign["strategy"]
+                        st.session_state.copy_content = demo_campaign["preliminary_copy"]
+                        st.session_state.review_and_final = demo_campaign["review_and_final"]
+                        st.session_state.image_prompts = demo_campaign["image_prompts"]
+                        st.session_state.guardrails_result = demo_campaign["guardrails_result"]
+                        st.session_state.campaign_result = demo_campaign
+                        st.session_state.report_md = rep_md
+                        st.session_state.report_txt = rep_txt
+                        st.session_state.last_submission_sent = False
+                        st.session_state.automation_status = None
+                        st.session_state.ai_workflow_states = {
+                            "briefing": "completed",
+                            "research": "completed",
+                            "strategist": "completed",
+                            "copywriter": "completed",
+                            "reviewer": "completed",
+                            "image_designer": "completed",
+                            "ready": "completed"
+                        }
+                        st.rerun()
+
                     # Preserva o estado das etapas preliminares concluidas
                     if (
                         st.session_state.get("research_data")
@@ -574,7 +708,10 @@ has_campaign_content = bool(
 )
 
 if not st.session_state.get("form_data") or not has_campaign_content:
-    st.info("ℹ️ Preencha os campos de configuração acima e clique em **Gerar campanha com IA** para visualizar os resultados.")
+    if is_demo_mode:
+        st.info("ℹ️ Clique no botão **▶ Iniciar demonstração** acima para carregar e visualizar os resultados dos 4 agentes do Café Aurora.")
+    else:
+        st.info("ℹ️ Preencha os campos de configuração acima e clique em **Gerar campanha com IA** para visualizar os resultados.")
 else:
     # Metricas reais de acompanhamento
     mcol1, mcol2, mcol3, mcol4 = st.columns(4)
