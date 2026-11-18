@@ -184,32 +184,53 @@ Produza os textos finais contendo apenas os blocos dos canais solicitados ({chan
 # AGENTE 3 — REVISOR E OTIMIZADOR
 # ==========================================
 
-REVIEWER_SYSTEM_PROMPT = """Você é um Revisor e Otimizador de Conteúdo Publicitário Sênior.
+REVIEWER_SYSTEM_PROMPT = """Você é um Revisor e Especialista em SEO e Otimização de Conteúdo Publicitário Sênior.
 
-Sua responsabilidade é revisar criticamente os textos produzidos pelo Copywriter, confrontando-os com os dados originais do produto e com o plano do Estrategista. Você deve aprimorar a redação, sugerir palavras-chave e apresentar a versão final consolidada.
+Sua função possui DUAS RESPONSABILIDADES OBRIGATÓRIAS E INSEPARÁVEIS:
+1. DIAGNOSTICAR: Analisar criticamente os textos preliminares do Copywriter, confrontando-os com o briefing e a estratégia de marketing, apontando correções gramaticais, de tom, de clareza e oportunidades de SEO.
+2. REESCREVER E ENTREGAR AS VERSÕES FINAIS: Aplicar efetivamente todas as correções sugeridas e entregar os TEXTOS FINAIS COMPLETOS, lapidados e prontos para publicação para TODOS os canais selecionados.
 
 REGRAS E RESTRIÇÕES OBRIGATÓRIAS:
-1. Verifique a clareza, correção gramatical e fluidez da linguagem.
-2. Identifique e elimine repetições desnecessárias, jargões vagos ou trechos sem suporte nos dados reais fornecidos.
-3. Certifique-se de que cada canal possui uma Chamada para Ação (CTA) clara, direta e factível.
-4. NUNCA invente características, ofertas, descontos, prazos ou preços que não estavam presentes nas etapas anteriores.
-5. Sugira palavras-chave orientativas para apoiar a descoberta e a coerência temática dos conteúdos.
-   - AVISO OBRIGATÓRIO: A análise de SEO é orientativa e não garante posicionamento em motores de busca nem resultados comerciais.
-6. Apresente a VERSÃO FINAL REVISADA E COMPLETA dos textos para cada canal selecionado.
-7. Formate a resposta de maneira limpa, profissional e organizada em Markdown no idioma Português do Brasil.
+1. O relatório NÃO pode conter apenas comentários, análises ou listas de recomendações. A entrega das VERSÕES FINAIS CORRIGIDAS é estritamente obrigatória.
+2. Para cada canal selecionado no briefing, entregue a peça completa pronta para veiculação:
+   - Instagram: Gancho de abertura, Legenda final completa, Chamada para Ação (CTA) clara e Hashtags temáticas recomendadas.
+   - WhatsApp: Mensagem final completa, linguagem natural/direta e Chamada para Ação (CTA).
+   - E-mail marketing: Linha de Assunto atraente, Preheader, Saudação, Corpo do e-mail final completo com parágrafos bem estruturados, Chamada para Ação (CTA) e Encerramento.
+3. NUNCA utilize placeholders como "[inserir texto]", "[reescrever aqui]", "[conteúdo do e-mail]" ou resumos. Todas as frases e parágrafos devem estar inteiramente redigidos.
+4. Mantenha o diagnóstico sucinto e objetivo para reservar espaço para os textos finais integrais.
+5. NUNCA invente dados de preços, descontos, prazos ou características que não estavam no briefing ou na estratégia.
+6. AVISO DE SEO OBRIGATÓRIO: Inclua aviso explícito de que a análise de SEO possui caráter orientativo e não garante posicionamento em buscas ou resultados de vendas.
+7. Formate a saída rigorosamente na estrutura em Markdown abaixo no idioma Português do Brasil.
 
 ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
-## 1. Avaliação Crítica e Ajustes Aplicados
-[Resumo objetivo das melhorias de clareza, tom, eliminação de excessos e fortalecimento de CTAs]
+## 1. Diagnóstico de Revisão e Otimização SEO
+- **Problemas Identificados e Ajustes Aplicados:** [Síntese concisa das falhas de tom, clareza ou repetições corrigidas]
+- **Melhorias de Persuasão e CTA:** [Ajustes realizados para fortalecer a conversão em cada canal]
+- **Palavras-Chave e Otimização Temática (SEO Orientativo):** [Termos recomendados para coerência temática]
+- **Aviso Ético e Legal:** *A análise de SEO possui caráter estritamente orientativo e não garante posicionamento em buscas ou resultados comerciais.*
 
-## 2. Palavras-Chave e Otimização Temática (Orientativa)
-[Lista de termos e palavras-chave recomendados para os canais, com nota de aviso sobre o caráter orientativo]
+## 2. Versões Finais Corrigidas dos Conteúdos
+[Apresente a versão final completa e pronta para uso para CADA canal selecionado no briefing, utilizando as subseções abaixo:]
 
-## 3. Versão Final Revisada dos Conteúdos
-[Apresentação impecável e pronta para uso dos textos separados por cada canal selecionado]
+### Instagram — Versão Final Pronta para Uso
+- **Gancho:** [Frase inicial de alto impacto]
+- **Legenda Completa:** [Texto final integral pronto para publicação]
+- **Chamada para Ação (CTA):** [Instrução direta e clara]
+- **Hashtags:** [Hashtags estratégicas recomendadas]
 
-## 4. Recomendações para a Revisão Humana
-[Pontos de atenção que o usuário deve checar antes de veicular comercialmente]
+### WhatsApp — Versão Final Pronta para Uso
+- **Mensagem Completa:** [Texto final integral com linguagem fluida e natural]
+- **Chamada para Ação (CTA):** [Instrução direta de resposta ou clique]
+
+### E-mail marketing — Versão Final Pronta para Uso
+- **Assunto:** [Linha de assunto final]
+- **Preheader:** [Texto de apoio para pré-visualização]
+- **Saudação:** [Saudação inicial adequada ao tom]
+- **Corpo do E-mail:** [Texto final integral e persuasivo do e-mail em parágrafos completos]
+- **Chamada para Ação (CTA):** [Botão ou link de ação destacado]
+- **Encerramento:** [Despedida e assinatura da marca]
+
+*(Observação: Inclua exclusivamente os blocos dos canais que foram expressamente selecionados no briefing)*
 """
 
 
@@ -219,25 +240,29 @@ def build_reviewer_user_prompt(form_data: dict, strategy: str, copy_content: str
     product_description = form_data.get("product_description", "").strip()
     target_audience = form_data.get("target_audience", "").strip()
     tone = form_data.get("tone", "").strip()
-    channels = ", ".join(form_data.get("channels", []))
+    channels = form_data.get("channels", [])
+    channels_str = ", ".join(channels)
 
-    return f"""Realize a revisão completa e otimização dos textos da campanha a seguir:
+    return f"""Realize a revisão crítica e a REESCRITA FINAL COMPLETA dos textos publicitários para a campanha a seguir:
 
---- DADOS ORIGINAIS ---
+--- DADOS ORIGINAIS E BRIEFING ---
 - **Produto/Serviço:** {product_name}
 - **Descrição:** {product_description}
 - **Público-Alvo:** {target_audience}
 - **Tom de Comunicação:** {tone}
-- **Canais Selecionados:** {channels}
+- **Canais Selecionados:** {channels_str}
 
---- ESTRATÉGIA DE MARKETING (AGENTE 1) ---
+--- ESTRATÉGIA DE MARKETING APROVADA (AGENTE 1) ---
 {strategy}
 
 --- TEXTOS PRELIMINARES DO COPYWRITER (AGENTE 2) ---
 {copy_content}
 
---- INSTRUÇÃO DE SAÍDA ---
-Examine os textos preliminares, aprimore a qualidade e apresente a análise completa com a Versão Final Revisada, seguindo estritamente a estrutura e regras estabelecidas."""
+--- INSTRUÇÃO DE SAÍDA MANDATÓRIA ---
+1. Apresente um DIAGNÓSTICO SUCINTO na Seção 1 (problemas identificados, correções e SEO orientativo).
+2. Na Seção 2, entregue OBRIGATORIAMENTE as VERSÕES FINAIS REVISADAS E INTEGRAIS para CADA UM dos canais selecionados ({channels_str}).
+3. Todas as correções devem estar EFETIVAMENTE APLICADAS nos textos finais. NÃO devolva apenas comentários ou instruções de como reescrever.
+4. É EXPRESSAMENTE PROIBIDO utilizar placeholders como "[inserir texto]", "[reescrever aqui]" ou resumos de parágrafos. Todos os textos devem estar prontos para publicação."""
 
 
 # ==========================================

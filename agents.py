@@ -111,13 +111,15 @@ def run_copywriter_agent(form_data: dict, strategy: str) -> str:
 
 def run_reviewer_agent(form_data: dict, strategy: str, copy_content: str) -> str:
     """
-    Executa o Agente 3 — Revisor e Otimizador.
-    Revisa criticamente os textos, sugere palavras-chave e apresenta a versão final consolidada por canal.
-    Dimensiona tokens para acomodar a analise critica e os textos integrais finais.
+    Executa o Agente 3 — Revisor e Especialista em SEO.
+    Responsabilidades obrigatórias:
+    1. Diagnóstico sucinto de revisão e otimização temática (SEO orientativo).
+    2. Versões finais corrigidas completas e prontas para uso para TODOS os canais selecionados.
+    Dimensiona tokens para acomodar o diagnóstico e a reescrita integral de cada canal.
     """
     user_prompt = build_reviewer_user_prompt(form_data, strategy, copy_content)
     channels = form_data.get("channels", [])
-    max_tokens = min(4000, 1800 + len(channels) * 800)
+    max_tokens = min(4096, max(2600, 2000 + len(channels) * 700))
 
     review_content = generate_chat_completion(
         system_prompt=REVIEWER_SYSTEM_PROMPT,
@@ -126,26 +128,28 @@ def run_reviewer_agent(form_data: dict, strategy: str, copy_content: str) -> str
         temperature=0.3
     )
 
-    # Validacao para assegurar presenca da versao final revisada completa
+    # Validação para assegurar presença da versão final revisada completa por canal
     val = validate_reviewer_output(review_content, channels)
     if not val.is_valid and (val.missing_sections or val.missing_channels):
         missing_desc = []
         if val.missing_sections:
             missing_desc.append(f"Seções: {', '.join(val.missing_sections)}")
         if val.missing_channels:
-            missing_desc.append(f"Canais na versão final: {', '.join(val.missing_channels)}")
+            missing_desc.append(f"Canais ausentes na versão final: {', '.join(val.missing_channels)}")
 
         repair_instruction = (
             f"{user_prompt}\n\n"
-            f"INSTRUÇÃO DE CORREÇÃO: A revisão anterior ficou incompleta ({'; '.join(missing_desc)}). "
-            "É OBRIGATÓRIO apresentar a Seção '3. Versão Final Revisada dos Conteúdos' contendo os textos "
-            f"integrais prontos para uso para cada um dos canais: {', '.join(channels)}."
+            f"INSTRUÇÃO DE CORREÇÃO OBRIGATÓRIA: A revisão anterior não entregou as versões finais completas ({'; '.join(missing_desc)}).\n"
+            "Você DEVE fornecer obrigatoriamente a Seção '## 2. Versões Finais Corrigidas dos Conteúdos' contendo a "
+            "reescrita integral, pronta para publicação, com todos os blocos exigidos para cada canal solicitado: "
+            f"{', '.join(channels)}.\n"
+            "NÃO utilize placeholders como '[inserir texto]' ou '[reescrever aqui]'. Não resuma o conteúdo."
         )
         try:
             repaired = generate_chat_completion(
                 system_prompt=REVIEWER_SYSTEM_PROMPT,
                 user_prompt=repair_instruction,
-                max_tokens=max_tokens + 500,
+                max_tokens=max_tokens + 400,
                 temperature=0.25
             )
             val_rep = validate_reviewer_output(repaired, channels)

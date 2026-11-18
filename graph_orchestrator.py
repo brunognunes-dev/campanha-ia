@@ -187,11 +187,25 @@ def especialista_seo_node(
     copy_content = state.get("preliminary_copy", "")
     channels = form_data.get("channels", [])
 
-    _notify_progress(config, "reviewer", "running", "Agente 3 (Revisor & SEO) refinando os textos e otimizando a versão final...")
+    _notify_progress(config, "reviewer", "running", "Agente 3 (Revisor & SEO) refinando os textos e consolidando as versões finais...")
     review_content = agents.run_reviewer_agent(form_data, strategy, copy_content)
 
     val = validate_reviewer_output(review_content, channels)
-    _notify_progress(config, "reviewer", "completed", "Revisão e versão final concluídas.", review_content)
+    if not val.is_valid and (val.missing_channels or val.missing_sections):
+        missing_msg = []
+        if val.missing_sections:
+            missing_msg.append(f"seções: {', '.join(val.missing_sections)}")
+        if val.missing_channels:
+            missing_msg.append(f"canais na versão final: {', '.join(val.missing_channels)}")
+        _notify_progress(
+            config,
+            "reviewer",
+            "completed",
+            f"Revisão concluída com ressalvas ({'; '.join(missing_msg)}).",
+            review_content
+        )
+    else:
+        _notify_progress(config, "reviewer", "completed", "Revisão e versões finais consolidadas com sucesso.", review_content)
 
     return {
         "review_and_final": review_content

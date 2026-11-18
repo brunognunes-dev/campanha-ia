@@ -200,9 +200,11 @@ def validate_copywriter_output(copy_text: str, channels: list[str]) -> Validatio
 def validate_reviewer_output(review_text: str, channels: list[str]) -> ValidationResult:
     """
     Valida a saida do Agente 3 (Revisor):
-    - Avaliacao critica/ajustes presentes.
-    - Palavras-chave SEO com aviso presentes.
-    - OBRIGATORIO: Versao final completa para CADA canal solicitado (nao apenas observacoes).
+    1. Diagnostico e palavras-chave SEO presentes.
+    2. Secao de Versoes Finais Corrigidas OBRIGATORIA.
+    3. Todos os canais solicitados presentes na secao de versoes finais com conteudo substancial.
+    4. Blocos obrigatorios por canal (Instagram: legenda/CTA; WhatsApp: mensagem/CTA; E-mail: assunto/corpo/CTA).
+    5. Proibicao estrita de placeholders de reescrita como '[inserir texto]' ou '[reescrever aqui]'.
     """
     clean = (review_text or "").strip()
     if len(clean) < 150:
@@ -219,31 +221,85 @@ def validate_reviewer_output(review_text: str, channels: list[str]) -> Validatio
 
     missing_sections = []
     missing_channels = []
+    warnings = []
 
-    # Checagem de secao de versao final consolidada
-    has_final_version_header = any(
+    # 1. Checagem de diagnostico / avaliacao critica
+    has_diagnostic = any(
         k in text_lower for k in [
-            "versão final", "versao final", "textos finais",
-            "conteúdo final", "conteudo final", "textos revisados"
+            "diagnóstico", "diagnostico", "avaliação crítica", "avaliacao critica",
+            "avaliação", "avaliacao", "ajustes", "problemas identificados",
+            "análise crítica", "analise critica"
         ]
     )
-    if not has_final_version_header:
-        missing_sections.append("Versão Final Revisada dos Conteúdos")
+    if not has_diagnostic:
+        missing_sections.append("Diagnóstico de Revisão")
 
-    # Checagem de palavras-chave SEO
-    has_seo = any(k in text_lower for k in ["palavras-chave", "palavra-chave", "seo", "otimização temática"])
+    # 2. Checagem de palavras-chave SEO
+    has_seo = any(k in text_lower for k in ["palavras-chave", "palavra-chave", "seo", "otimização temática", "otimizacao tematica"])
     if not has_seo:
         missing_sections.append("Palavras-Chave e Otimização Temática")
 
-    # Verifica se os canais estao presentes na versao final
+    # 3. Localizacao da secao obrigatoria de Versoes Finais Corrigidas
+    final_version_headers = [
+        "versões finais", "versoes finais", "versão final", "versao final",
+        "textos finais", "conteúdo final", "conteudo final", "textos revisados"
+    ]
+    final_section_idx = -1
+    for h in final_version_headers:
+        pos = text_lower.find(h)
+        if pos != -1 and (final_section_idx == -1 or pos < final_section_idx):
+            final_section_idx = pos
+
+    if final_section_idx == -1:
+        missing_sections.append("Versão Final Revisada dos Conteúdos")
+        final_section_text = ""
+    else:
+        final_section_text = text_lower[final_section_idx:]
+
+    # 4. Checagem de placeholders de reescrita proibidos
+    placeholder_matches = re.findall(
+        r"\[(?:inserir|reescrever|preencher|adicionar|colocar|escrever|conteúdo|conteudo|texto|sua mensagem)\b[^\]]*\]",
+        text_lower
+    )
+    if placeholder_matches:
+        missing_sections.append(f"Textos Finais Integrais (placeholders identificados: {', '.join(set(placeholder_matches))})")
+
+    # 5. Verificacao de cada canal solicitado DENTRO da secao de Versoes Finais
     for ch in channels:
         ch_lower = ch.lower()
-        if "instagram" in ch_lower and not any(k in text_lower for k in ["instagram", "feed", "legenda"]):
-            missing_channels.append("Instagram")
-        elif "whatsapp" in ch_lower and not any(k in text_lower for k in ["whatsapp", "zap"]):
-            missing_channels.append("WhatsApp")
-        elif ("e-mail" in ch_lower or "email" in ch_lower) and not any(k in text_lower for k in ["e-mail", "email", "assunto"]):
-            missing_channels.append("E-mail marketing")
+        if "instagram" in ch_lower:
+            # Deve estar presente na secao final com legenda/feed/stories
+            has_insta_header = any(k in final_section_text for k in ["instagram", "feed", "stories", "legenda"])
+            has_insta_body = any(k in final_section_text for k in ["legenda", "gancho", "feed", "stories", "post"])
+            has_insta_cta = any(k in final_section_text for k in ["cta", "link na bio", "comente", "acesse", "clique", "visite", "confira"])
+
+            if not has_insta_header:
+                missing_channels.append("Instagram")
+            elif not has_insta_body or not has_insta_cta:
+                warnings.append("Instagram: elementos da versão final (legenda/CTA) parecem incompletos.")
+
+        elif "whatsapp" in ch_lower:
+            has_zap_header = any(k in final_section_text for k in ["whatsapp", "zap", "mensagem"])
+            has_zap_cta = any(k in final_section_text for k in ["cta", "responda", "link", "clique", "acesse", "chame", "fale conosco", "visite", "ganhe"])
+
+            if not has_zap_header:
+                missing_channels.append("WhatsApp")
+            elif not has_zap_cta:
+                warnings.append("WhatsApp: chamada para ação (CTA) da mensagem final não identificada.")
+
+        elif "e-mail" in ch_lower or "email" in ch_lower:
+            has_email_header = any(k in final_section_text for k in ["e-mail", "email"])
+            has_email_subject = any(k in final_section_text for k in ["assunto", "subject", "pre-header", "preheader"])
+            has_email_body = any(k in final_section_text for k in ["corpo", "corpo do e-mail", "prezado", "olá", "ola", "parágrafo", "paragrafo"]) or len(final_section_text) > 400
+
+            if not has_email_header or not has_email_subject:
+                missing_channels.append("E-mail marketing")
+            elif not has_email_body:
+                warnings.append("E-mail marketing: corpo da mensagem parece ausente ou excessivamente curto.")
+
+        else:
+            if ch_lower not in final_section_text:
+                missing_channels.append(ch)
 
     is_valid = len(missing_sections) == 0 and len(missing_channels) == 0 and not is_trunc
     err_msg = None
@@ -263,6 +319,7 @@ def validate_reviewer_output(review_text: str, channels: list[str]) -> Validatio
         missing_sections=missing_sections,
         missing_channels=missing_channels,
         is_truncated=is_trunc,
+        warnings=warnings,
         error_message=err_msg
     )
 

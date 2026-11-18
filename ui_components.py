@@ -240,6 +240,7 @@ def render_sidebar(authenticated: bool = True):
 
             ---
             <div style="font-size: 0.75rem; color: #64748B; margin-top: 1.5rem;">
+                <strong>Bruno Gabriel Nunes</strong><br>
                 Programa Geração Tech 2026<br>
                 Curso de IA Generativa
             </div>

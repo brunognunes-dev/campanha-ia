@@ -701,9 +701,14 @@ elif st.session_state.get("automation_status"):
 st.markdown(
     """
     <div style="font-size: 0.8rem; color: #64748B; border-top: 1px solid #1E293B; padding-top: 1rem; margin-top: 2rem;">
-        ⚠️ <strong>Aviso Ético e Legal:</strong> Os textos, estratégias e sugestões de SEO contidos nesta plataforma 
-        são gerados por Inteligência Artificial Generativa com caráter orientativo. Todo conteúdo deve ser submetido 
-        à criteriosa validação e revisão humana antes de veiculação pública ou comercial.
+        <div style="margin-bottom: 0.5rem;">
+            ⚠️ <strong>Aviso Ético e Legal:</strong> Os textos, estratégias e sugestões de SEO contidos nesta plataforma 
+            são gerados por Inteligência Artificial Generativa com caráter orientativo. Todo conteúdo deve ser submetido 
+            à criteriosa validação e revisão humana antes de veiculação pública ou comercial.
+        </div>
+        <div style="font-size: 0.75rem; color: #94A3B8; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 0.5rem;">
+            Desenvolvido por <strong>Bruno Gabriel Nunes</strong> • Programa Geração Tech 2026 — Curso de IA Generativa
+        </div>
     </div>
     """,
     unsafe_allow_html=True
