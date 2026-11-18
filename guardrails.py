@@ -1,18 +1,20 @@
 """
-Modulo de Guardrails Independentes do MarketFlow AI.
+Modulo de Guardrails Independentes do MarketFlow AI 2.0.
 Realiza verificacoes deterministicas de estrutura, consistencia de briefing,
 cobertura de canais solicitados e deteccao contextual de alegacoes comerciais
 nao fundamentadas ou potencialmente enganosas.
 
 Diretrizes:
 - Verificacoes 100% deterministicas (sem dependencia de chamada adicional a LLM).
-- Nao bloqueia conteudos legitimos apenas por palavras isoladas.
-- Valida amparo nos dados do briefing informado pelo usuario.
+- Valida saídas dos agentes individualmente (evita falsos positivos por presenca de nomes no briefing).
+- Inclui validacao estrutural do Agente 4 (Designer de Prompts de Imagem).
+- Inspeciona truncamento e repeticoes degenerativas.
 - A validacao automatica e orientativa e nao se afirma infalivel.
 """
 
 import re
 from typing import Any, Optional
+from output_validation import _check_truncation
 
 
 # Disclaimer oficial sobre a natureza orientativa dos guardrails
@@ -24,7 +26,6 @@ GUARDRAILS_DISCLAIMER = (
 )
 
 # Padroes contextuais de severidade CRITICA (alegacoes fraudulentas ou promessas enganosas sem risco)
-# Nao utiliza palavras isoladas; exige combinacoes contextuais categóricas.
 CRITICAL_UNGROUNDED_PATTERNS = [
     (
         r"(?:retorno|lucro|ganho|rendimento)\s+(?:financeiro\s+)?(?:garantido|100%|certo|sem\s+(?:qualquer\s+)?risco)",
@@ -77,7 +78,6 @@ def _is_claim_grounded_in_briefing(claim_matched: str, briefing_text: str) -> bo
     """
     Verifica se a alegacao encontrada nos textos da campanha possui respaldo
     direto informado pelo proprio usuario nos campos do briefing.
-    Evita falsos positivos quando o proprio usuario configurou a caracteristica.
     """
     if not briefing_text:
         return False
@@ -85,7 +85,6 @@ def _is_claim_grounded_in_briefing(claim_matched: str, briefing_text: str) -> bo
     b_lower = briefing_text.lower()
     c_lower = claim_matched.lower()
 
-    # Se o trecho exato ou substantivos centrais estiverem no briefing, considera amparado
     words = [w for w in re.split(r"\W+", c_lower) if len(w) > 4]
     if len(words) >= 2:
         matching_words = sum(1 for w in words if w in b_lower)
@@ -93,6 +92,20 @@ def _is_claim_grounded_in_briefing(claim_matched: str, briefing_text: str) -> bo
             return True
 
     return c_lower in b_lower
+
+
+def _detect_repetition_loops(text: str) -> bool:
+    """Detecta repeticao degenerativa de sentencas (loop de geracao da LLM)."""
+    if not text or len(text) < 200:
+        return False
+    sentences = [s.strip() for s in re.split(r"[.\n!?]", text) if len(s.strip()) > 30]
+    seen = {}
+    for s in sentences:
+        s_norm = re.sub(r"\s+", " ", s.lower())
+        seen[s_norm] = seen.get(s_norm, 0) + 1
+        if seen[s_norm] >= 4:
+            return True
+    return False
 
 
 def validate_campaign_guardrails(
@@ -115,12 +128,13 @@ def validate_campaign_guardrails(
     strategy = str(campaign_data.get("strategy") or "").strip()
     copy_content = str(campaign_data.get("preliminary_copy") or "").strip()
     review_content = str(campaign_data.get("review_and_final") or "").strip()
+    image_prompts = str(campaign_data.get("image_prompts") or "").strip()
     report_md = str(report_markdown or "").strip()
 
-    # Texto agregado de todos os conteudos gerados para analise global
-    all_generated_text = f"{strategy}\n\n{copy_content}\n\n{review_content}\n\n{report_md}"
+    # Textos dos agentes (sem o cabecalho de briefing para evitar falsos positivos de canais)
+    agents_corpus = f"{strategy}\n\n{copy_content}\n\n{review_content}\n\n{image_prompts}"
+    all_generated_text = f"{agents_corpus}\n\n{report_md}"
 
-    # Texto de referencia do briefing (dados fornecidos pelo usuario)
     briefing_corpus = " ".join([
         str(form_data.get("product_name") or ""),
         str(form_data.get("product_description") or ""),
@@ -152,9 +166,8 @@ def validate_campaign_guardrails(
         passed_checks.append("Integridade dos campos fundamentais do briefing")
 
     # =========================================================================
-    # CHECK 2: Consistencia e Completude dos Agentes
+    # CHECK 2: Consistencia e Completude dos Agentes 1, 2 e 3
     # =========================================================================
-    # Verifica se a estrategia (Agente 1) possui substancia
     if len(strategy) < 30:
         critical_issues.append({
             "code": "EMPTY_STRATEGY",
@@ -165,7 +178,6 @@ def validate_campaign_guardrails(
     else:
         passed_checks.append("Densidade e estrutura do plano estratégico (Agente 1)")
 
-    # Verifica se a versao revisada final (Agente 3) possui substancia
     if len(review_content) < 30:
         critical_issues.append({
             "code": "EMPTY_REVIEW",
@@ -177,7 +189,7 @@ def validate_campaign_guardrails(
         passed_checks.append("Validação da versão final revisada (Agente 3)")
 
     # =========================================================================
-    # CHECK 3: Cobertura dos Canais Selecionados
+    # CHECK 3: Cobertura dos Canais Selecionados (Validada nas Saidas Efetivas)
     # =========================================================================
     if not channels or not isinstance(channels, list):
         critical_issues.append({
@@ -188,18 +200,20 @@ def validate_campaign_guardrails(
         })
     else:
         missing_channels = []
+        # Analisa nos textos dos agentes diretamente (copy e revisao)
+        channels_eval_text = f"{copy_content}\n\n{review_content}".lower()
+
         for ch in channels:
             ch_str = str(ch).strip()
-            # Mapeamento de termos de busca por canal
             terms_to_look = [ch_str.lower()]
             if "instagram" in ch_str.lower():
-                terms_to_look.extend(["feed", "stories", "legenda", "reels"])
+                terms_to_look.extend(["feed", "stories", "legenda", "reels", "instagram"])
             elif "whatsapp" in ch_str.lower():
-                terms_to_look.extend(["mensagem", "zap", "conversa"])
+                terms_to_look.extend(["whatsapp", "mensagem", "zap", "conversa"])
             elif "e-mail" in ch_str.lower() or "email" in ch_str.lower():
-                terms_to_look.extend(["assunto", "pre-header", "corpo do e-mail", "email"])
+                terms_to_look.extend(["e-mail", "email", "assunto", "pre-header", "corpo do e-mail"])
 
-            matched = any(t in all_generated_text.lower() for t in terms_to_look)
+            matched = any(t in channels_eval_text for t in terms_to_look)
             if not matched:
                 missing_channels.append(ch_str)
 
@@ -221,13 +235,77 @@ def validate_campaign_guardrails(
             passed_checks.append(f"Cobertura confirmada de todos os {len(channels)} canais selecionados")
 
     # =========================================================================
-    # CHECK 4: Compliance Publicitário — Alegações Críticas Não Fundamentadas
+    # CHECK 4: Validacao do Agente 4 (Designer de Prompts de Imagem)
+    # =========================================================================
+    if "image_prompts" in campaign_data:
+        if not image_prompts or len(image_prompts) < 40:
+            warnings.append({
+                "code": "EMPTY_IMAGE_PROMPTS",
+                "title": "Prompts de Imagem Não Consolidados",
+                "message": "O Designer de Prompts de Imagem (Agente 4) não gerou as especificações visuais esperadas.",
+                "remediation": "Execute a etapa do Agente 4 para obter a direção de arte e prompts textuais para cada canal."
+            })
+        else:
+            img_lower = image_prompts.lower()
+            missing_img_channels = []
+            for ch in channels:
+                ch_s = str(ch).strip().lower()
+                if ch_s not in img_lower:
+                    if "instagram" in ch_s and not any(k in img_lower for k in ["instagram", "feed"]):
+                        missing_img_channels.append(str(ch))
+                    elif "whatsapp" in ch_s and not any(k in img_lower for k in ["whatsapp", "zap"]):
+                        missing_img_channels.append(str(ch))
+                    elif ("e-mail" in ch_s or "email" in ch_s) and not any(k in img_lower for k in ["e-mail", "email", "header"]):
+                        missing_img_channels.append(str(ch))
+
+            if missing_img_channels:
+                warnings.append({
+                    "code": "PARTIAL_IMAGE_CHANNELS",
+                    "title": "Prompts Visuais Parciais",
+                    "message": f"O Agente 4 não incluiu sugestões de arte para: {', '.join(missing_img_channels)}.",
+                    "remediation": "Assegure que os prompts textuais cubram todos os canais de veiculação."
+                })
+            else:
+                passed_checks.append("Cobertura de prompts textuais de imagem para todos os canais (Agente 4)")
+
+    # =========================================================================
+    # CHECK 5: Inspecao de Truncamento e Repeticao Degenerativa
+    # =========================================================================
+    trunc_sections = []
+    if strategy and _check_truncation(strategy):
+        trunc_sections.append("Estratégia (Agente 1)")
+    if copy_content and _check_truncation(copy_content):
+        trunc_sections.append("Copywriting (Agente 2)")
+    if review_content and _check_truncation(review_content):
+        trunc_sections.append("Revisão (Agente 3)")
+    if image_prompts and _check_truncation(image_prompts):
+        trunc_sections.append("Prompts de Imagem (Agente 4)")
+
+    if trunc_sections:
+        warnings.append({
+            "code": "TRUNCATED_AGENT_OUTPUT",
+            "title": "Indício de Resposta Incompleta ou Truncada",
+            "message": f"Foi detectada possível interrupção de texto em: {', '.join(trunc_sections)}.",
+            "remediation": "Verifique a extensão do conteúdo gerado antes de autorizar o envio."
+        })
+    else:
+        passed_checks.append("Integridade de encerramento das respostas dos agentes (sem truncamento)")
+
+    if _detect_repetition_loops(all_generated_text):
+        warnings.append({
+            "code": "REPETITIVE_CONTENT_LOOP",
+            "title": "Repetição Textual Excessiva Detectada",
+            "message": "Foram identificadas frases idênticas repetidas múltiplas vezes no conteúdo gerado.",
+            "remediation": "Revise o conteúdo para garantir variedade vocabular e fluidez."
+        })
+
+    # =========================================================================
+    # CHECK 6: Compliance Publicitário — Alegações Críticas Não Fundamentadas
     # =========================================================================
     detected_critical_claims = []
     for pattern, rationale in CRITICAL_UNGROUNDED_PATTERNS:
         matched_str = _text_contains_pattern(pattern, all_generated_text)
         if matched_str:
-            # Checa se o briefing embasa a alegacao (ex: se o usuario escreveu no briefing)
             is_grounded = _is_claim_grounded_in_briefing(matched_str, briefing_corpus)
             if not is_grounded:
                 detected_critical_claims.append({
@@ -254,7 +332,7 @@ def validate_campaign_guardrails(
         passed_checks.append("Ausência de promessas de lucro garantido ou alegações milagrosas vedadas")
 
     # =========================================================================
-    # CHECK 5: Alertas de Atenção — Gatilhos e Alegações Suspeitas
+    # CHECK 7: Alertas de Atenção — Gatilhos e Alegações Suspeitas
     # =========================================================================
     detected_warning_claims = []
     for pattern, rationale in WARNING_SUSPICIOUS_PATTERNS:
@@ -283,7 +361,7 @@ def validate_campaign_guardrails(
         passed_checks.append("Consistência de gatilhos de urgência e percentuais de desconto")
 
     # =========================================================================
-    # CHECK 6: Presença do Aviso Ético e Orientativo Obrigatório
+    # CHECK 8: Presença do Aviso Ético e Orientativo Obrigatório
     # =========================================================================
     disclaimer_keywords = ["aviso importante", "caráter orientativo", "revisão humana", "inteligência artificial"]
     lower_report = (report_md + " " + review_content).lower()
@@ -311,7 +389,6 @@ def validate_campaign_guardrails(
     else:
         final_status = "approved"
 
-    # Score deterministico ponderado
     total_checks = len(passed_checks) + len(critical_issues) + len(warnings)
     if total_checks > 0:
         penalty = (len(critical_issues) * 35) + (len(warnings) * 12)

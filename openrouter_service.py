@@ -1,14 +1,17 @@
 """
 Modulo responsavel exclusivamente pela comunicacao com o gateway OpenRouter.
-Otimizado para alta performance:
-- Descoberta dinamica dos modelos gratuitos disponiveis
-- Memorizacao do modelo gratuito ativo (evita tentativas redundantes entre agentes)
+Otimizado para alta performance e confiabilidade:
+- Inspecao e validacao rigorosa de finalizacao de resposta (finish_reason)
+- Deteccao e recuperacao controlada de respostas truncadas por limite de tokens
+- Roteamento inteligente de modelos com selecao preferencial de modelos de alta qualidade para PT-BR
+- Isolamento de contexto de sessao para selecao de modelo ativo
+- Sanitizacao completa de credenciais e erros sem exposicao de prefixos de chaves
 - Timeouts ajustados para failover rapido em caso de congestionamento
-- Cliente criado a cada chamada para garantir leitura correta de st.secrets no Streamlit Cloud
 """
 
+import contextvars
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 import requests
 
 try:
@@ -19,9 +22,13 @@ except ImportError:
     except ImportError:
         tomllib = None
 
-# Cache de modelos — seguro manter em nivel de modulo (nao envolve credenciais)
+# Cache em memoria de modelos gratuitos conhecidos
 _CACHED_FREE_MODELS: list[str] = []
-_ACTIVE_WORKING_MODEL: Optional[str] = None
+
+# ContextVar para isolamento de sessao do modelo ativo (thread-safe e async-safe)
+_SESSION_ACTIVE_MODEL: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "_SESSION_ACTIVE_MODEL", default=None
+)
 
 
 def _read_secrets_file() -> dict:
@@ -53,10 +60,10 @@ def _read_secrets_file() -> dict:
 def _get_api_credentials() -> tuple[str, str]:
     """
     Recupera API key e modelo de st.secrets ou diretamente do arquivo de configuracao.
-    A importacao de streamlit e feita aqui (lazy) para garantir que st.secrets
+    A importacao de streamlit e feita de forma lazy para garantir que st.secrets
     ja esteja totalmente inicializado quando esta funcao for chamada em runtime.
     """
-    import streamlit as st  # import lazy — garante leitura correta no Streamlit Cloud
+    import streamlit as st
 
     api_key = ""
     configured_model = "auto"
@@ -82,31 +89,35 @@ def _get_api_credentials() -> tuple[str, str]:
             "No ambiente local, configure em .streamlit/secrets.toml."
         )
 
-    # Diagnostico temporario: valida formato minimo da chave antes de usar
+    # Validacao de formato minimo sem expor prefixos ou dados parciais da chave
     if len(api_key) < 20:
         raise ValueError(
-            f"[DIAGNÓSTICO] A chave OPENROUTER_API_KEY parece inválida: "
-            f"comprimento={len(api_key)}, prefixo={repr(api_key[:6])}. "
-            "Verifique se foi copiada corretamente no painel de Secrets do Streamlit Cloud."
+            "A chave OPENROUTER_API_KEY parece incompleta ou com tamanho insuficiente. "
+            "Verifique se o token foi copiado integralmente no painel de Secrets ou no arquivo secrets.toml."
         )
 
     return api_key, configured_model
 
 
 def _fetch_available_free_models() -> list[str]:
-    """Consulta os modelos gratuitos (:free) com cache em memoria."""
+    """
+    Consulta os modelos gratuitos (:free) disponiveis no catalogo do OpenRouter.
+    Prioriza modelos com reconhecida capacidade de contexto, raciocinio estruturado e fluencia em Portugues.
+    """
     global _CACHED_FREE_MODELS
     if _CACHED_FREE_MODELS:
         return _CACHED_FREE_MODELS
 
+    # Lista prioritária de modelos com alta qualidade em geração estruturada e suporte a PT-BR
     preferred_order = [
-        "particle-ai/particle-1:free",
-        "baidu/ernie-5.5-flash-preview:free",
-        "cohere/north-mini-code:free",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "google/gemini-2.0-flash-exp:free",
+        "qwen/qwen-2.5-72b-instruct:free",
+        "mistralai/mistral-small-24b-instruct-2501:free",
+        "deepseek/deepseek-r1:free",
         "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
         "nvidia/nemotron-3-ultra-550b-a55b:free",
         "liquid/lfm-3-1.7b:free",
-        "inclusionai/ling-3.2-flash:free",
     ]
 
     try:
@@ -134,46 +145,94 @@ def _fetch_available_free_models() -> list[str]:
     return preferred_order
 
 
+def _try_recover_truncated_completion(
+    client: Any,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    partial_content: str,
+    max_tokens: int,
+    temperature: float
+) -> Optional[str]:
+    """
+    Tenta uma unica recuperacao controlada de uma resposta interrompida por limite de tokens (finish_reason='length').
+    Fornece o trecho anterior como contexto de assistente e instrui a continuacao estrita do ponto onde parou.
+    """
+    if not partial_content or len(partial_content) < 50:
+        return None
+
+    tail_snip = partial_content[-150:].replace("\n", " ")
+    continuation_instruction = (
+        f"Sua geração anterior foi interrompida no seguinte ponto final:\n"
+        f"\"{tail_snip}\"\n\n"
+        "INSTRUÇÃO DE RECUPERAÇÃO: Continue o texto EXATAMENTE a partir deste ponto onde parou até concluir "
+        "todas as seções e canais obrigatórios pendentes. NÃO repita nada do que já foi escrito acima. "
+        "Não inclua saudações ou preâmbulos, retome diretamente o conteúdo faltante."
+    )
+
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+                {"role": "assistant", "content": partial_content},
+                {"role": "user", "content": continuation_instruction}
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature
+        )
+
+        if resp and hasattr(resp, "choices") and resp.choices:
+            choice = resp.choices[0]
+            if hasattr(choice, "message") and choice.message:
+                tail = (choice.message.content or "").strip()
+                finish_reason = getattr(choice, "finish_reason", None)
+                if tail and finish_reason in ("stop", None):
+                    return f"{partial_content.rstrip()}\n\n{tail.lstrip()}"
+    except Exception:
+        pass
+
+    return None
+
+
 def generate_chat_completion(
     system_prompt: str,
     user_prompt: str,
-    max_tokens: int = 1200,
+    max_tokens: int = 1500,
     temperature: float = 0.35
 ) -> str:
     """
     Executa uma chamada de chat completion ao OpenRouter com mensagens de sistema e usuario.
-    - O cliente OpenAI e criado a cada chamada para garantir que a api_key lida de
-      st.secrets seja sempre a mais atual (corrige autenticacao no Streamlit Cloud).
-    - Prioriza o modelo que ja respondeu com sucesso na chamada anterior (mesma sessao).
-    - Failover rapido em caso de erro.
+    - Valida presenca de escolhas (choices), objeto message e conteudo retornado.
+    - Analisa finish_reason: detecta respostas truncadas por limite de tokens e tenta recuperacao controlada.
+    - Prioriza modelo confirmado na sessao atual com failover inteligente.
+    - Tratamento seguro de excecoes com mensagens sanitizadas.
     """
-    from openai import OpenAI  # import lazy — evita erro de import antes de st.secrets estar pronto
-
-    global _ACTIVE_WORKING_MODEL
+    from openai import OpenAI
 
     api_key, configured_model = _get_api_credentials()
 
-    # Cliente criado aqui, apos credenciais confirmadas — sem singleton para evitar
-    # cache de chave invalida na inicializacao do modulo no Streamlit Cloud
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=api_key,
-        timeout=25.0,
+        timeout=30.0,
         max_retries=1
     )
 
     models_to_try: list[str] = []
 
-    # 1. Se ja temos um modelo confirmado que respondeu na mesma sessao, coloca no topo!
-    if _ACTIVE_WORKING_MODEL:
-        models_to_try.append(_ACTIVE_WORKING_MODEL)
+    # 1. Prioriza o modelo ativo confirmado para a sessao corrente
+    active_session_model = _SESSION_ACTIVE_MODEL.get()
+    if active_session_model:
+        models_to_try.append(active_session_model)
 
     # 2. Modelo configurado explicitamente no secrets (se diferente de auto)
     if configured_model and configured_model.lower() != "auto":
         if configured_model not in models_to_try:
             models_to_try.append(configured_model)
 
-    # 3. Modelos gratuitos ativos como fallback
+    # 3. Modelos gratuitos de alta qualidade como pool de fallback
     free_models = _fetch_available_free_models()
     for m in free_models:
         if m not in models_to_try:
@@ -193,38 +252,77 @@ def generate_chat_completion(
                 temperature=temperature
             )
 
-            msg = response.choices[0].message
-            content = msg.content or ""
+            # Validacao defensiva da estrutura da resposta
+            if not response or not hasattr(response, "choices") or not response.choices:
+                raise ValueError(f"Resposta vazia ou sem choices retornada pelo modelo {model}.")
+
+            choice = response.choices[0]
+            if not hasattr(choice, "message") or not choice.message:
+                raise ValueError(f"Choice sem objeto message retornado pelo modelo {model}.")
+
+            content = choice.message.content or ""
             content = content.strip()
 
-            if content:
-                # Memoriza o modelo que funcionou para as proximas chamadas dos outros agentes!
-                _ACTIVE_WORKING_MODEL = model
-                return content
+            if not content:
+                raise ValueError(f"Conteúdo vazio gerado pelo modelo {model}.")
+
+            # Inspecao do motivo de encerramento da geracao
+            finish_reason = getattr(choice, "finish_reason", None)
+
+            # Se interrompido por limite de tokens, tenta uma recuperacao controlada
+            if finish_reason == "length":
+                recovered = _try_recover_truncated_completion(
+                    client=client,
+                    model=model,
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    partial_content=content,
+                    max_tokens=max_tokens,
+                    temperature=temperature
+                )
+                if recovered:
+                    content = recovered
+                else:
+                    raise ValueError(
+                        f"A geração do modelo {model} foi interrompida pelo limite de tokens (finish_reason='length') "
+                        f"e não pôde ser recuperada com integridade."
+                    )
+
+            # Sucesso validado
+            _SESSION_ACTIVE_MODEL.set(model)
+            return content
+
         except Exception as e:
             last_error = e
-            # Se o modelo falhou e era o memorizado, reseta para testar o proximo
-            if _ACTIVE_WORKING_MODEL == model:
-                _ACTIVE_WORKING_MODEL = None
+            # Se o modelo falhou e era o ativo da sessao, reseta para testar o proximo
+            if _SESSION_ACTIVE_MODEL.get() == model:
+                _SESSION_ACTIVE_MODEL.set(None)
             continue
 
-    error_msg = str(last_error) if last_error else "Nenhum conteúdo foi retornado pelo modelo."
+    # Tratamento seguro e sanitizado da falha final
+    error_msg = str(last_error) if last_error else "Nenhum conteúdo válido foi retornado pelos modelos consultados."
     error_lower = error_msg.lower()
 
-    # Deteccao ampliada de erros de autenticacao (cobre variacoes do SDK openai)
     if (
         "401" in error_msg
         or "authentication" in error_lower
         or "api key" in error_lower
-        or "invalid" in error_lower
         or "unauthorized" in error_lower
-        or "authenticationerror" in error_lower
     ):
         raise RuntimeError(
-            f"Erro de autenticação: Verifique se sua chave do OpenRouter é válida. "
-            f"[Detalhe técnico: {error_msg[:200]}]"
+            "Erro de autenticação com o OpenRouter: Verifique se sua credencial OPENROUTER_API_KEY é válida."
         )
     elif "429" in error_msg or "rate limit" in error_lower:
-        raise RuntimeError("Limite de requisições atingido no OpenRouter. Aguarde alguns instantes e tente novamente.")
+        raise RuntimeError(
+            "Limite de requisições temporariamente atingido no gateway OpenRouter. Aguarde alguns instantes."
+        )
+    elif "timeout" in error_lower or "timed out" in error_lower:
+        raise RuntimeError(
+            "Tempo limite de resposta esgotado ao consultar o OpenRouter. Tente novamente."
+        )
+    elif "connection" in error_lower or "failed to connect" in error_lower:
+        raise RuntimeError(
+            "Falha de conexão com os servidores do OpenRouter. Verifique sua conexão de rede."
+        )
     else:
-        raise RuntimeError(f"Falha na comunicação com o OpenRouter: {error_msg}")
+        raise RuntimeError(f"Falha na geração com os modelos do OpenRouter: {error_msg}")

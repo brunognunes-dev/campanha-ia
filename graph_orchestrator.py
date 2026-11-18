@@ -8,8 +8,8 @@ Implementa StateGraph deterministico com estado compartilhado entre os agentes:
 4. designer_prompts_imagem: Agente 4 (Direção visual e prompts generativos)
 5. guardrails: Validação determinística de compliance e integridade
 
-Preserva o modo automatico do OpenRouter, callbacks de progresso para o Streamlit
-e tratamento rigoroso de excecoes sem loops infinitos ou memoria redundante.
+Preserva o modo automatico do OpenRouter, callbacks de progresso para o Streamlit,
+validacao estrutural intermediaria entre nos e tratamento rigoroso de excecoes.
 """
 
 import contextvars
@@ -19,6 +19,12 @@ from langchain_core.runnables import RunnableConfig
 
 import agents
 from guardrails import validate_campaign_guardrails
+from output_validation import (
+    validate_strategist_output,
+    validate_copywriter_output,
+    validate_reviewer_output,
+    validate_image_designer_output
+)
 
 # ContextVar para propagacao robusta do callback de progresso mesmo em execucoes assincronas
 _CURRENT_PROGRESS_CALLBACK: contextvars.ContextVar[Optional[Callable]] = contextvars.ContextVar(
@@ -76,6 +82,7 @@ def pesquisador_tendencias_node(
     No 1: Pesquisador de Tendencias e Estrategista de Marketing.
     Executa a pesquisa externa de mercado via Tavily ANTES da chamada a LLM,
     e em seguida invoca o Agente 1 para elaborar a estrategia fundamentada.
+    Valida a completude estrutural antes de prosseguir.
     """
     form_data = state.get("form_data", {})
 
@@ -120,7 +127,12 @@ def pesquisador_tendencias_node(
     # 2. Agente 1 (Estrategista com dados de mercado)
     _notify_progress(config, "strategist", "running", "Agente 1 (Pesquisador & Estrategista) elaborando o plano fundamentado...")
     strategy = agents.run_strategist_agent(form_data, research_data=research_data)
-    _notify_progress(config, "strategist", "completed", "Estratégia de marketing fundamentada concluída.", strategy)
+
+    val = validate_strategist_output(strategy)
+    if not val.is_valid and val.is_truncated:
+        _notify_progress(config, "strategist", "completed", "Estratégia concluída (com alerta de extensão).", strategy)
+    else:
+        _notify_progress(config, "strategist", "completed", "Estratégia de marketing fundamentada concluída.", strategy)
 
     return {
         "research_data": research_data,
@@ -139,10 +151,22 @@ def copywriter_node(
     """
     form_data = state.get("form_data", {})
     strategy = state.get("strategy", "")
+    channels = form_data.get("channels", [])
 
     _notify_progress(config, "copywriter", "running", "Agente 2 (Copywriter) redigindo os textos para os canais selecionados...")
     copy_content = agents.run_copywriter_agent(form_data, strategy)
-    _notify_progress(config, "copywriter", "completed", "Textos dos canais criados com sucesso.", copy_content)
+
+    val = validate_copywriter_output(copy_content, channels)
+    if not val.is_valid and val.missing_channels:
+        _notify_progress(
+            config,
+            "copywriter",
+            "completed",
+            f"Textos gerados (atenção: canais {', '.join(val.missing_channels)} requerem revisão).",
+            copy_content
+        )
+    else:
+        _notify_progress(config, "copywriter", "completed", "Textos dos canais criados com sucesso.", copy_content)
 
     return {
         "preliminary_copy": copy_content
@@ -161,9 +185,12 @@ def especialista_seo_node(
     form_data = state.get("form_data", {})
     strategy = state.get("strategy", "")
     copy_content = state.get("preliminary_copy", "")
+    channels = form_data.get("channels", [])
 
     _notify_progress(config, "reviewer", "running", "Agente 3 (Revisor & SEO) refinando os textos e otimizando a versão final...")
     review_content = agents.run_reviewer_agent(form_data, strategy, copy_content)
+
+    val = validate_reviewer_output(review_content, channels)
     _notify_progress(config, "reviewer", "completed", "Revisão e versão final concluídas.", review_content)
 
     return {
@@ -186,6 +213,7 @@ def designer_prompts_imagem_node(
 
     _notify_progress(config, "image_designer", "running", "Agente 4 (Designer Visual) elaborando prompts de imagem publicitária...")
     image_prompts = agents.run_image_designer_agent(form_data, strategy, review_content)
+
     _notify_progress(config, "image_designer", "completed", "Prompts e direção visual concluídos com sucesso.", image_prompts)
 
     return {
@@ -211,7 +239,16 @@ def guardrails_node(
     }
 
     guardrails_res = validate_campaign_guardrails(campaign_data=campaign_data)
-    _notify_progress(config, "ready", "completed", "Campanha pronta para uso e exportação.")
+
+    if guardrails_res.get("is_blocked"):
+        _notify_progress(
+            config,
+            "ready",
+            "completed",
+            "Campanha gerada (bloqueada para envio automático por inconformidade crítica)."
+        )
+    else:
+        _notify_progress(config, "ready", "completed", "Campanha pronta para uso e exportação.")
 
     return {
         "guardrails_result": guardrails_res

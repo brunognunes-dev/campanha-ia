@@ -352,7 +352,26 @@ if submit_button:
 
                 st.session_state.ai_workflow_states["ready"] = "completed"
                 status_box.update(label="✨ Campanha gerada e revisada com sucesso!", state="complete", expanded=False)
-                st.success("✅ Todos os 4 agentes completaram suas etapas com êxito!")
+
+                # Mensagem de conclusao diferenciada: completa vs incompleta vs bloqueada
+                _gr = st.session_state.guardrails_result or {}
+                _is_blocked = bool(_gr.get("is_blocked", False))
+                _is_complete = bool(campaign_data.get("is_complete", True))
+
+                if _is_blocked:
+                    st.warning(
+                        "⚠️ Campanha gerada, mas os **Guardrails** identificaram problemas críticos de compliance. "
+                        "O envio automático está bloqueado até a correção do briefing. "
+                        "Veja o painel de Guardrails abaixo para detalhes."
+                    )
+                elif not _is_complete:
+                    st.warning(
+                        "⚠️ Um ou mais agentes não conseguiram completar sua etapa integralmente (limite de tokens ou indisponibilidade do modelo). "
+                        "O relatório foi gerado com marcação **[RASCUNHO INCOMPLETO]** nas seções afetadas. "
+                        "Recomendamos revisar e reexecutar com um briefing mais curto."
+                    )
+                else:
+                    st.success("✅ Todos os 4 agentes completaram suas etapas com êxito!")
 
             except Exception as e:
                 for k, v in st.session_state.ai_workflow_states.items():
@@ -501,7 +520,7 @@ else:
         if st.session_state.get("copy_content"):
             st.markdown(st.session_state.copy_content)
         else:
-            st.info("Os textos específicos para cada canal serão exibidos aqui.")
+            st.warning("⚠️ Os textos publicitários por canal ainda não foram gerados. Execute a campanha para gerar este conteúdo.")
 
     with tab_review:
         st.markdown(
@@ -515,7 +534,7 @@ else:
         if st.session_state.get("review_and_final"):
             st.markdown(st.session_state.review_and_final)
         else:
-            st.info("A análise crítica e a versão final lapidada serão exibidas aqui.")
+            st.warning("⚠️ A revisão crítica e versão final ainda não foram geradas. Execute a campanha para gerar este conteúdo.")
 
     with tab_images:
         st.markdown(
@@ -526,10 +545,14 @@ else:
             """,
             unsafe_allow_html=True
         )
+        st.caption(
+            "ℹ️ **Nota:** Esta aba exibe prompts textuais otimizados (em inglês) para uso em ferramentas de geração de imagens "
+            "como Midjourney, DALL-E ou Flux. Os prompts são gerados pelo Agente 4 — nenhuma imagem é gerada diretamente aqui."
+        )
         if st.session_state.get("image_prompts"):
             st.markdown(st.session_state.image_prompts)
         else:
-            st.info("Os prompts visuais e diretrizes de arte serão exibidos aqui após a geração.")
+            st.warning("⚠️ Os prompts visuais e diretrizes de arte ainda não foram gerados. Execute a campanha para gerar este conteúdo.")
 
 st.divider()
 
