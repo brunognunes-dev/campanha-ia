@@ -1,0 +1,22 @@
+Implemente exclusivamente o quarto agente do MarketFlow AI: Designer de Prompts de Imagem.
+
+Inspecione primeiro a estrutura atual de `agents.py`, `prompts.py`, `app.py` e `ui_components.py`.
+
+Requisitos:
+
+1. Manter os três agentes existentes operacionais.
+2. Criar um prompt de sistema especializado para o Designer de Prompts de Imagem.
+3. Criar uma função Python que utilize `generate_chat_completion()` do serviço OpenRouter existente.
+4. Fornecer ao quarto agente o briefing, a estratégia e os textos finais da campanha.
+5. Produzir apenas prompts textuais de imagens publicitárias.
+6. Não adicionar bibliotecas de geração de imagens.
+7. Integrar o resultado ao relatório Markdown e TXT.
+8. Adicionar o quarto agente ao painel visual de execução, utilizando eventos reais.
+9. Preservar os estados do Streamlit.
+10. Criar testes com mocks para o novo agente.
+
+Não implemente LangGraph nesta etapa.
+
+Não modifique o n8n nem a configuração do OpenRouter.
+
+Valide a aplicação existente e o novo agente antes de considerar a etapa concluída.

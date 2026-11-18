@@ -1,0 +1,21 @@
+Atualize exclusivamente a interface Streamlit do MarketFlow AI 2.0 para refletir as funcionalidades que foram implementadas e testadas.
+
+Preserve a identidade visual dark premium existente.
+
+Atualize o painel AI Workflow para mostrar os quatro agentes especializados e os estados reais de execução.
+
+Adicione uma seção de Pesquisa de Tendências, exibindo os resultados e URLs das fontes consultadas.
+
+Adicione uma seção Designer de Prompts de Imagem, mostrando os prompts visuais gerados.
+
+Exiba o resultado dos guardrails, incluindo avisos e falhas críticas.
+
+Na área Automation Workflow, mantenha o encaminhamento via webhook e n8n e represente o registro no Google Sheets de acordo com os estados efetivamente observáveis pela aplicação.
+
+Não simule o progresso interno dos nós do n8n.
+
+Preserve o formulário, o gerenciamento do estado Streamlit, o OpenRouter automático, a exportação Markdown/TXT e a integração HTTP.
+
+Não altere regras de negócio ou APIs nesta etapa.
+
+Execute os testes existentes e não publique automaticamente.

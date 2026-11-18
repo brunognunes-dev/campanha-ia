@@ -8,6 +8,8 @@ ENV/
 
 # Variáveis de ambiente
 .env
+.env.*
+*.env
 
 # Python Cache
 __pycache__/
@@ -21,3 +23,6 @@ __pycache__/
 Thumbs.db
 .vscode/
 .idea/
+
+# Teste com credencial
+scratch_test_models.py

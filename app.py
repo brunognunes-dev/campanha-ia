@@ -4,15 +4,20 @@ Interface principal desenvolvida com Streamlit.
 Conceito: Modern AI Studio — Premium Dark SaaS Interface.
 """
 
+import hmac
+from pathlib import Path
+from typing import Any
 import streamlit as st
 from agents import generate_full_campaign, build_campaign_reports
-from automation_service import send_campaign_to_n8n
+from automation_service import send_campaign_to_n8n, sanitize_error_message
+from guardrails import validate_campaign_guardrails
 from ui_components import (
     inject_custom_css,
     render_app_header,
     render_sidebar,
     render_ai_workflow_panel,
-    render_automation_workflow_panel
+    render_automation_workflow_panel,
+    render_guardrails_panel
 )
 
 # Configuracao da pagina
@@ -39,20 +44,59 @@ if "campaign_result" not in st.session_state:
 if "automation_status" not in st.session_state:
     st.session_state.automation_status = None
 
+if "image_prompts" not in st.session_state:
+    st.session_state.image_prompts = None
+
+if "research_data" not in st.session_state:
+    st.session_state.research_data = None
+
+if "guardrails_result" not in st.session_state:
+    st.session_state.guardrails_result = None
+
 if "ai_workflow_states" not in st.session_state:
     st.session_state.ai_workflow_states = {
         "briefing": "pending",
+        "research": "pending",
         "strategist": "pending",
         "copywriter": "pending",
         "reviewer": "pending",
+        "image_designer": "pending",
         "ready": "pending"
     }
 
 
+def _get_demo_access_password() -> str:
+    """Recupera a credencial de demonstracao com tratamento seguro e fallback."""
+    raw_pwd = ""
+    try:
+        raw_pwd = str(st.secrets.get("DEMO_ACCESS_PASSWORD", "") or "").strip()
+    except Exception:
+        pass
+
+    if not raw_pwd:
+        secrets_path = Path(__file__).parent / ".streamlit" / "secrets.toml"
+        if secrets_path.exists():
+            try:
+                from automation_service import tomllib
+                if tomllib is not None:
+                    with open(secrets_path, "rb") as f:
+                        data = tomllib.load(f)
+                        raw_pwd = str(data.get("DEMO_ACCESS_PASSWORD", "") or "").strip()
+            except Exception:
+                pass
+
+    return raw_pwd
+
+
 def check_password() -> bool:
-    """Verifica a senha de demonstracao configurada no secrets.toml com interface estilizada."""
-    expected_password = st.secrets.get("DEMO_ACCESS_PASSWORD", "")
-    
+    """
+    Verifica a credencial de demonstracao configurada nos segredos.
+    Utiliza comparacao segura em tempo constante (hmac.compare_digest)
+    para evitar vulnerabilidades de timing attack e preserva a interface estilizada.
+    """
+    expected_password = _get_demo_access_password()
+
+    # Se nao houver senha configurada, libera o acesso imediatamente
     if not expected_password:
         return True
 
@@ -79,7 +123,17 @@ def check_password() -> bool:
             submit_button = st.form_submit_button("Entrar no Estúdio", use_container_width=True, type="primary")
 
             if submit_button:
-                if password_input == expected_password:
+                cleaned_input = str(password_input or "").strip()
+                is_valid = False
+                try:
+                    is_valid = hmac.compare_digest(
+                        cleaned_input.encode("utf-8"),
+                        expected_password.encode("utf-8")
+                    )
+                except Exception:
+                    is_valid = (cleaned_input == expected_password)
+
+                if is_valid:
                     st.session_state.authenticated = True
                     st.rerun()
                 else:
@@ -241,24 +295,31 @@ if submit_button:
         # Inicializa os estados do workflow visual
         st.session_state.ai_workflow_states = {
             "briefing": "completed",
-            "strategist": "running",
+            "research": "pending",
+            "strategist": "pending",
             "copywriter": "pending",
             "reviewer": "pending",
+            "image_designer": "pending",
             "ready": "pending"
         }
 
-        st.markdown("### 🤖 AI Workflow — Processamento em Tempo Real")
-        wf_placeholder = st.empty()
-        with wf_placeholder.container():
-            render_ai_workflow_panel(st.session_state.ai_workflow_states)
-
         with st.status("🚀 Orquestrando Pipeline Multiagente...", expanded=True) as status_box:
             try:
-                def on_agent_progress(stage: str, state: str, message: str):
+                def on_agent_progress(stage: str, state: str, message: str, result: Any = None):
                     st.session_state.ai_workflow_states[stage] = state
-                    with wf_placeholder.container():
-                        render_ai_workflow_panel(st.session_state.ai_workflow_states)
                     status_box.write(f"🔄 {message}")
+                    # Preservacao incremental de resultados intermediarios
+                    if state == "completed" and result:
+                        if stage == "research":
+                            st.session_state.research_data = result
+                        elif stage == "strategist":
+                            st.session_state.strategy = result
+                        elif stage == "copywriter":
+                            st.session_state.copy_content = result
+                        elif stage == "reviewer":
+                            st.session_state.review_and_final = result
+                        elif stage == "image_designer":
+                            st.session_state.image_prompts = result
 
                 campaign_data = generate_full_campaign(
                     st.session_state.form_data,
@@ -267,35 +328,54 @@ if submit_button:
 
                 report_md, report_txt = build_campaign_reports(campaign_data)
 
+                st.session_state.research_data = campaign_data.get("research_data")
                 st.session_state.strategy = campaign_data["strategy"]
                 st.session_state.copy_content = campaign_data["preliminary_copy"]
                 st.session_state.review_and_final = campaign_data["review_and_final"]
+                st.session_state.image_prompts = campaign_data.get("image_prompts", "")
                 st.session_state.campaign_result = campaign_data
                 st.session_state.report_md = report_md
                 st.session_state.report_txt = report_txt
                 st.session_state.last_submission_sent = False
                 st.session_state.automation_status = None
 
-                st.session_state.ai_workflow_states["ready"] = "completed"
-                with wf_placeholder.container():
-                    render_ai_workflow_panel(st.session_state.ai_workflow_states)
+                # Guardrails: prioriza o resultado ja calculado pelo LangGraph internamente.
+                # Fallback: executa localmente caso o grafo nao retorne guardrails_result.
+                guardrails_from_graph = campaign_data.get("guardrails_result")
+                if guardrails_from_graph and isinstance(guardrails_from_graph, dict):
+                    st.session_state.guardrails_result = guardrails_from_graph
+                else:
+                    st.session_state.guardrails_result = validate_campaign_guardrails(
+                        campaign_data=campaign_data,
+                        report_markdown=report_md
+                    )
 
+                st.session_state.ai_workflow_states["ready"] = "completed"
                 status_box.update(label="✨ Campanha gerada e revisada com sucesso!", state="complete", expanded=False)
-                st.success("✅ Todos os 3 agentes completaram suas etapas com êxito!")
+                st.success("✅ Todos os 4 agentes completaram suas etapas com êxito!")
 
             except Exception as e:
                 for k, v in st.session_state.ai_workflow_states.items():
                     if v == "running":
                         st.session_state.ai_workflow_states[k] = "error"
-                with wf_placeholder.container():
-                    render_ai_workflow_panel(st.session_state.ai_workflow_states)
                 status_box.update(label="❌ Falha na orquestração dos agentes", state="error", expanded=True)
-                st.error(f"Erro durante a execução do pipeline: {e}")
+                safe_err_msg = sanitize_error_message(e)
+                st.error(f"Erro durante a execução do pipeline: {safe_err_msg}")
+
+                # Preserva o estado das etapas preliminares concluidas
+                if (
+                    st.session_state.get("research_data")
+                    or st.session_state.get("strategy")
+                    or st.session_state.get("copy_content")
+                    or st.session_state.get("review_and_final")
+                    or st.session_state.get("image_prompts")
+                ):
+                    st.info("ℹ️ As etapas já concluídas com sucesso foram preservadas nas abas de resultados abaixo.")
 
 st.divider()
 
 # ==============================================================================
-# SEÇÃO 2: PAINEL AI WORKFLOW (VISUALIZAÇÃO PERMANENTE DO PIPELINE)
+# SEÇÃO 2: PAINEL AI WORKFLOW (VISUALIZAÇÃO DO PIPELINE)
 # ==============================================================================
 st.markdown("### 🤖 AI Workflow")
 st.markdown(
@@ -315,38 +395,95 @@ st.divider()
 # ==============================================================================
 st.markdown("### 📊 Studio Dashboard — Resultados da Campanha")
 
-if not st.session_state.form_data or not st.session_state.campaign_result:
+has_campaign_content = bool(
+    st.session_state.get("campaign_result")
+    or st.session_state.get("strategy")
+    or st.session_state.get("copy_content")
+    or st.session_state.get("review_and_final")
+    or st.session_state.get("image_prompts")
+    or st.session_state.get("research_data")
+)
+
+if not st.session_state.get("form_data") or not has_campaign_content:
     st.info("ℹ️ Preencha os campos de configuração acima e clique em **Gerar campanha com IA** para visualizar os resultados.")
 else:
     # Metricas reais de acompanhamento
     mcol1, mcol2, mcol3, mcol4 = st.columns(4)
     with mcol1:
-        st.metric(label="Produto / Oferta", value=st.session_state.form_data["product_name"][:18] + "...")
+        prod_title = str(st.session_state.form_data.get("product_name", "Campanha"))
+        st.metric(label="Produto / Oferta", value=prod_title[:18] + ("..." if len(prod_title) > 18 else ""))
     with mcol2:
-        st.metric(label="Agentes Executados", value="3 de 3 Concluídos")
+        completed_agents = sum(
+            1 for st_name in ["strategist", "copywriter", "reviewer", "image_designer"]
+            if st.session_state.ai_workflow_states.get(st_name) == "completed"
+        )
+        st.metric(label="Agentes Executados", value=f"{completed_agents} de 4 Concluídos")
     with mcol3:
-        st.metric(label="Canais Gerados", value=f"{len(st.session_state.form_data['channels'])} Canais")
+        ch_count = len(st.session_state.form_data.get("channels", []))
+        st.metric(label="Canais Gerados", value=f"{ch_count} Canais")
     with mcol4:
-        st.metric(label="Status da Campanha", value="Revisada & Pronta")
+        campaign_status_label = "Revisada & Pronta" if st.session_state.get("campaign_result") else "Parcial / Em Andamento"
+        st.metric(label="Status da Campanha", value=campaign_status_label)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Abas estruturadas de apresentacao
-    tab_strategy, tab_copy, tab_review = st.tabs([
+    tab_strategy, tab_copy, tab_review, tab_images = st.tabs([
         "📋 1. Estratégia de Marketing",
         "✍️ 2. Conteúdos Multicanal",
-        "🔍 3. AI Review & Otimização"
+        "🔍 3. AI Review & Otimização",
+        "🎨 4. Prompts de Imagem"
     ])
 
     with tab_strategy:
         st.markdown(
             """
             <div class="card-header-title">
-                <span>🎯 Plano Estratégico (Agente 1 — Estrategista)</span>
+                <span>🎯 Plano Estratégico & Pesquisa de Tendências (Agente 1)</span>
             </div>
             """,
             unsafe_allow_html=True
         )
+
+        # Exibição de fontes de pesquisa de mercado externa (Tavily Search API)
+        res_data = st.session_state.get("research_data") or (st.session_state.get("campaign_result") or {}).get("research_data")
+        if res_data and isinstance(res_data, dict):
+            if res_data.get("success") and res_data.get("results"):
+                cache_badge = " • <em>(Resultados de cache em memória)</em>" if res_data.get("cached") else ""
+                query_text = res_data.get("query", "")
+                sources_count = len(res_data.get("results", []))
+
+                st.markdown(
+                    f"""
+                    <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+                        <div style="font-weight: 700; color: #C4B5FD; font-size: 0.95rem; margin-bottom: 0.35rem;">
+                            🌐 Fontes Reais de Mercado Consultadas em Tempo Real (Tavily API)
+                        </div>
+                        <div style="font-size: 0.82rem; color: #94A3B8;">
+                            Consulta: <code>{query_text}</code> • Fontes reais consultadas: <strong>{sources_count}</strong>{cache_badge}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                for idx, item in enumerate(res_data["results"], 1):
+                    src_title = item.get("title", f"Fonte {idx}")
+                    src_url = item.get("url", "#")
+                    src_date = item.get("published_date")
+                    date_info = f" • <span style='color: #64748B;'>Publicado em: {src_date}</span>" if src_date else ""
+                    st.markdown(f"**{idx}. [{src_title}]({src_url})**{date_info}", unsafe_allow_html=True)
+                    if item.get("content"):
+                        with st.expander(f"Ver trecho observado da fonte {idx}", expanded=False):
+                            st.caption(item.get("content"))
+                st.markdown("<br>", unsafe_allow_html=True)
+            elif not res_data.get("success") or not res_data.get("results"):
+                err_reason = res_data.get("error") or "Serviço temporariamente indisponível"
+                st.warning(
+                    f"⚠️ **Pesquisa de tendências externas indisponível:** {err_reason}\n\n"
+                    "*A estratégia foi fundamentada estritamente nas informações fornecidas no briefing, sem invenção de fontes ou URLs.*"
+                )
+                st.markdown("<br>", unsafe_allow_html=True)
+
         if st.session_state.get("strategy"):
             st.markdown(st.session_state.strategy)
         else:
@@ -379,6 +516,20 @@ else:
             st.markdown(st.session_state.review_and_final)
         else:
             st.info("A análise crítica e a versão final lapidada serão exibidas aqui.")
+
+    with tab_images:
+        st.markdown(
+            """
+            <div class="card-header-title">
+                <span>🎨 Direção Visual e Prompts de Imagem (Agente 4 — Designer de Prompts)</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        if st.session_state.get("image_prompts"):
+            st.markdown(st.session_state.image_prompts)
+        else:
+            st.info("Os prompts visuais e diretrizes de arte serão exibidos aqui após a geração.")
 
 st.divider()
 
@@ -436,6 +587,17 @@ with col_exp2:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
+# Painel de Guardrails & Compliance
+is_guardrail_blocked = False
+if st.session_state.get("campaign_result"):
+    if not st.session_state.get("guardrails_result"):
+        st.session_state.guardrails_result = validate_campaign_guardrails(
+            campaign_data=st.session_state.campaign_result,
+            report_markdown=st.session_state.get("report_md", "")
+        )
+    render_guardrails_panel(st.session_state.guardrails_result)
+    is_guardrail_blocked = bool(st.session_state.guardrails_result.get("is_blocked", False))
+
 # Painel Visual do Automation Workflow (n8n & Gmail)
 current_auto_state = "ready"
 if st.session_state.get("automation_status"):
@@ -455,15 +617,21 @@ col_auth, col_send = st.columns([1.2, 1.8])
 with col_auth:
     confirm_review = st.checkbox(
         "Autorizo o envio: Confirmo que revisei os conteúdos gerados.",
-        disabled=(st.session_state.campaign_result is None)
+        disabled=(st.session_state.campaign_result is None or is_guardrail_blocked)
     )
 
 with col_send:
     send_button = st.button(
         "🚀 Disparar automação n8n (Encaminhar para revisão via Gmail)",
-        disabled=(st.session_state.campaign_result is None or not confirm_review),
-        type="primary" if (st.session_state.campaign_result and confirm_review) else "secondary",
+        disabled=(st.session_state.campaign_result is None or not confirm_review or is_guardrail_blocked),
+        type="primary" if (st.session_state.campaign_result and confirm_review and not is_guardrail_blocked) else "secondary",
         use_container_width=True
+    )
+
+if is_guardrail_blocked:
+    st.error(
+        "⛔ O encaminhamento para a automação n8n está bloqueado devido a inconsistências críticas identificadas nos Guardrails. "
+        "Você ainda pode visualizar e baixar os relatórios acima para efetuar as correções necessárias no briefing."
     )
 
 if send_button:
@@ -472,12 +640,19 @@ if send_button:
     else:
         with st.spinner("⚡ Conectando ao Webhook do n8n e disparando e-mail via Gmail API..."):
             render_automation_workflow_panel("sending")
-            res = send_campaign_to_n8n(
-                product_name=st.session_state.form_data["product_name"],
-                objective=st.session_state.form_data["objective"],
-                channels=st.session_state.form_data["channels"],
-                report_markdown=st.session_state.report_md
-            )
+            try:
+                res = send_campaign_to_n8n(
+                    product_name=st.session_state.form_data["product_name"],
+                    objective=st.session_state.form_data["objective"],
+                    channels=st.session_state.form_data["channels"],
+                    report_markdown=st.session_state.report_md
+                )
+            except Exception as e:
+                res = {
+                    "success": False,
+                    "uncertain": False,
+                    "message": f"Erro inesperado ao conectar ao n8n: {sanitize_error_message(e)}"
+                }
             st.session_state.automation_status = res
 
             if res["success"]:

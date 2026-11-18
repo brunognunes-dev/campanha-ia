@@ -1,0 +1,23 @@
+Atue como engenheiro de software sênior e trabalhe no projeto MarketFlow AI existente, atualmente na branch `feature/marketflow-v2`.
+
+Antes de alterar qualquer arquivo:
+
+1. Confirme a branch atual e o estado do Git.
+2. Inspecione `app.py`, `agents.py`, `openrouter_service.py`, `automation_service.py`, `ui_components.py`, `prompts.py` e os testes existentes.
+3. Preserve integralmente o fluxo de geração, a identidade visual, o roteamento automático do OpenRouter e a integração n8n.
+4. Não altere a branch `main` nem publique código.
+5. Não leia nem exiba valores de credenciais.
+
+Nesta primeira intervenção, implemente SOMENTE correções de robustez:
+
+- Validação rigorosa da resposta HTTP e do JSON retornado pelo n8n.
+- Tratamento seguro de erros exibidos na interface.
+- Preservação do estado da campanha após falhas.
+- Revisão da proteção de acesso existente, sem implementar login complexo.
+- Testes automatizados que utilizem mocks e não consumam APIs externas.
+
+Não introduza LangGraph, novos agentes ou funcionalidades nesta etapa.
+
+Implemente as correções de maneira incremental, execute os testes possíveis e apresente um resumo dos arquivos alterados. Não faça commit nem push automaticamente.
+
+Aguarde minha autorização para iniciar a próxima etapa.

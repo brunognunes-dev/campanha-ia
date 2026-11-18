@@ -1,0 +1,17 @@
+Implemente uma camada independente de guardrails no MarketFlow AI, preservando os agentes e a interface existentes.
+
+Crie `guardrails.py` com verificações determinísticas de estrutura, campos, canais e padrões de alegações comerciais não fundamentadas.
+
+Requisitos:
+
+- As verificações não devem depender obrigatoriamente de uma nova chamada à LLM.
+- Retorne um resultado estruturado com estado, avisos e problemas identificados.
+- Apresente os resultados na interface.
+- Bloqueie o encaminhamento de campanhas com falhas críticas.
+- Preserve a possibilidade de o usuário visualizar os resultados e entender por que foram bloqueados.
+- Não bloqueie conteúdos legítimos com base apenas em palavras isoladas.
+- Não afirme que a validação é infalível.
+- Inclua testes para conteúdos válidos, incompletos e suspeitos.
+- Não altere OpenRouter, LangGraph ou n8n nesta etapa.
+
+Execute os testes e informe os arquivos modificados.

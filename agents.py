@@ -3,28 +3,31 @@ Modulo de orquestracao dos agentes de IA generativa.
 Cada agente corresponde a uma funcao e uma chamada especializada ao OpenRouter.
 """
 
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 from prompts import (
     STRATEGIST_SYSTEM_PROMPT,
     build_strategist_user_prompt,
     COPYWRITER_SYSTEM_PROMPT,
     build_copywriter_user_prompt,
     REVIEWER_SYSTEM_PROMPT,
-    build_reviewer_user_prompt
+    build_reviewer_user_prompt,
+    IMAGE_DESIGNER_SYSTEM_PROMPT,
+    build_image_designer_user_prompt
 )
 from openrouter_service import generate_chat_completion
+from research_service import search_market_trends
 
 
-def run_strategist_agent(form_data: dict) -> str:
+def run_strategist_agent(form_data: dict, research_data: Optional[dict] = None) -> str:
     """
-    Executa o Agente 1 — Estrategista de Marketing.
-    Interpreta os dados brutos e gera o plano estrategico estruturado.
+    Executa o Agente 1 — Pesquisador de Tendências e Estrategista de Marketing.
+    Interpreta os dados brutos e os resultados normalizados de pesquisa externa para gerar o plano estratégico estruturado.
     """
-    user_prompt = build_strategist_user_prompt(form_data)
+    user_prompt = build_strategist_user_prompt(form_data, research_data=research_data)
     strategy = generate_chat_completion(
         system_prompt=STRATEGIST_SYSTEM_PROMPT,
         user_prompt=user_prompt,
-        max_tokens=1400,
+        max_tokens=1600,
         temperature=0.3
     )
     return strategy
@@ -62,61 +65,81 @@ def run_reviewer_agent(form_data: dict, strategy: str, copy_content: str) -> str
     return review_content
 
 
+def run_image_designer_agent(form_data: dict, strategy: str, review_and_final: str) -> str:
+    """
+    Executa o Agente 4 — Designer de Prompts de Imagem.
+    Gera especificações de direção visual e prompts textuais para geradores de imagens (Midjourney, DALL-E, etc.)
+    com base no briefing, na estratégia do Agente 1 e nos textos finais revisados do Agente 3.
+    """
+    user_prompt = build_image_designer_user_prompt(form_data, strategy, review_and_final)
+    image_prompts = generate_chat_completion(
+        system_prompt=IMAGE_DESIGNER_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        max_tokens=1800,
+        temperature=0.4
+    )
+    return image_prompts
+
+
 def generate_full_campaign(
     form_data: dict,
     progress_callback: Optional[Callable[..., None]] = None
 ) -> dict:
     """
-    Orquestra a sequencia completa dos 3 agentes:
-    1. Estrategista -> 2. Copywriter -> 3. Revisor
+    Orquestra a sequencia do pipeline utilizando o StateGraph do LangGraph:
+    0. Pesquisa Externa de Tendências (Tavily Search API)
+    1. Pesquisador & Estrategista -> 2. Copywriter -> 3. Revisor & SEO -> 4. Designer de Prompts de Imagem -> 5. Guardrails
     Retorna o dicionario consolidado com todas as etapas intermediarias e finais.
-    Notifica o callback com eventos reais de início e conclusão de cada agente.
+    Notifica o callback com eventos reais de início e conclusão de cada etapa,
+    preservando resultados parciais em caso de falha nas etapas subsequentes.
     """
-    def notify(stage: str, status: str, msg: str):
-        if progress_callback:
-            try:
-                progress_callback(stage, status, msg)
-            except TypeError:
-                progress_callback(msg, 1)
-
-    # Etapa 1: Estrategista
-    notify("strategist", "running", "Agente 1 (Estrategista) elaborando o plano de marketing...")
-    strategy = run_strategist_agent(form_data)
-    notify("strategist", "completed", "Estratégia de marketing concluída.")
-
-    # Etapa 2: Copywriter
-    notify("copywriter", "running", "Agente 2 (Copywriter) redigindo os textos para os canais selecionados...")
-    copy_content = run_copywriter_agent(form_data, strategy)
-    notify("copywriter", "completed", "Textos dos canais criados com sucesso.")
-
-    # Etapa 3: Revisor e Otimizador
-    notify("reviewer", "running", "Agente 3 (Revisor) refinando os textos e otimizando a versão final...")
-    review_content = run_reviewer_agent(form_data, strategy, copy_content)
-    notify("reviewer", "completed", "Revisão e versão final concluídas.")
-
-    notify("ready", "completed", "Campanha pronta para uso e exportação.")
-
-    return {
-        "form_data": form_data,
-        "strategy": strategy,
-        "preliminary_copy": copy_content,
-        "review_and_final": review_content
-    }
+    from graph_orchestrator import run_campaign_graph
+    return run_campaign_graph(form_data, progress_callback=progress_callback)
 
 
 def build_campaign_reports(campaign_data: dict) -> tuple[str, str]:
     """
     Gera o relatório consolidado da campanha nos formatos Markdown (.md) e Texto Puro (.txt).
-    Inclui identificação, briefing, estratégia, textos de cada canal, revisão e aviso legal.
+    Inclui identificação, briefing, fontes reais de pesquisa/tendências, estratégia fundamentada,
+    textos de cada canal, revisão crítica, direção visual e aviso legal.
     """
     import datetime
 
     form = campaign_data.get("form_data", {})
+    research = campaign_data.get("research_data")
     strategy = campaign_data.get("strategy", "")
     copy = campaign_data.get("preliminary_copy", "")
     review = campaign_data.get("review_and_final", "")
+    image_prompts = campaign_data.get("image_prompts", "")
     now_str = datetime.datetime.now().strftime("%d/%m/%Y às %H:%M")
     product_name = form.get("product_name", "Campanha IA")
+
+    # Formatacao da secao de pesquisa para o relatorio Markdown
+    md_research_lines = [
+        "## FONTES DE PESQUISA E TENDÊNCIAS DE MERCADO (TAVILY SEARCH API)"
+    ]
+    if research and isinstance(research, dict):
+        if research.get("success") and research.get("results"):
+            query_str = research.get("query", "")
+            md_research_lines.append(f"- **Consulta de Busca Realizada:** `{query_str}`")
+            md_research_lines.append(f"- **Total de Fontes Reais Consultadas:** {len(research['results'])}")
+            md_research_lines.append("")
+            for idx, src in enumerate(research["results"], 1):
+                src_title = src.get("title", f"Fonte {idx}")
+                src_url = src.get("url", "")
+                src_date = src.get("published_date")
+                date_txt = f" (Publicado em: {src_date})" if src_date else ""
+                md_research_lines.append(f"{idx}. [{src_title}]({src_url}){date_txt}")
+        elif not research.get("success"):
+            err_msg = research.get("error") or "Não informada"
+            md_research_lines.append(
+                f"*Pesquisa de mercado externa esteve indisponível durante a geração: {err_msg}*\n"
+                f"*A estratégia foi desenvolvida fundamentando-se estritamente nas premissas e dados do briefing.*"
+            )
+        else:
+            md_research_lines.append("*Nenhuma fonte externa consultada para esta campanha.*")
+    else:
+        md_research_lines.append("*Pesquisa externa de mercado não registrada para esta execução.*")
 
     # 1. Relatório em Markdown (.md)
     md_lines = [
@@ -135,6 +158,11 @@ def build_campaign_reports(campaign_data: dict) -> tuple[str, str]:
         f"- **Canais Selecionados:** {', '.join(form.get('channels', []))}",
         "",
         "---",
+    ]
+    md_lines.extend(md_research_lines)
+    md_lines.extend([
+        "",
+        "---",
         "## 2. ESTRATÉGIA DE MARKETING (AGENTE 1 — ESTRATEGISTA)",
         strategy,
         "",
@@ -146,13 +174,56 @@ def build_campaign_reports(campaign_data: dict) -> tuple[str, str]:
         "## 4. REVISÃO CRÍTICA, SEO E VERSÃO FINAL (AGENTE 3 — REVISOR)",
         review,
         "",
-        "---",
-        "## 5. AVISO ÉTICO E LEGAL",
-        "> **AVISO IMPORTANTE:** Os textos e análises contidos neste relatório foram elaborados por sistemas de Inteligência Artificial Generativa. "
+    ])
+
+    if image_prompts:
+        md_lines.extend([
+            "---",
+            "## 5. DIREÇÃO VISUAL E PROMPTS DE IMAGEM (AGENTE 4 — DESIGNER DE PROMPTS)",
+            image_prompts,
+            "",
+            "---",
+            "## 6. AVISO ÉTICO E LEGAL",
+        ])
+    else:
+        md_lines.extend([
+            "---",
+            "## 5. AVISO ÉTICO E LEGAL",
+        ])
+
+    md_lines.extend([
+        "> **AVISO IMPORTANTE:** Os textos, análises e especificações visuais contidos neste relatório foram elaborados por sistemas de Inteligência Artificial Generativa. "
         "A análise de SEO possui caráter estritamente orientativo e não garante posicionamento em buscas ou resultados de vendas. "
         "Todos os conteúdos devem passar por criteriosa revisão humana e validação antes de veiculação comercial."
-    ]
+    ])
     report_md = "\n".join(md_lines)
+
+    # Formatacao da secao de pesquisa para o relatorio Texto Puro (.txt)
+    txt_research_lines = [
+        "-" * 70,
+        "[FONTES DE PESQUISA E TENDÊNCIAS DE MERCADO (TAVILY SEARCH API)]",
+        "-" * 70,
+    ]
+    if research and isinstance(research, dict):
+        if research.get("success") and research.get("results"):
+            query_str = research.get("query", "")
+            txt_research_lines.append(f"Consulta de Busca: {query_str}")
+            txt_research_lines.append(f"Total de Fontes Reais: {len(research['results'])}")
+            txt_research_lines.append("")
+            for idx, src in enumerate(research["results"], 1):
+                src_title = src.get("title", f"Fonte {idx}")
+                src_url = src.get("url", "")
+                src_date = src.get("published_date")
+                date_txt = f" [Data: {src_date}]" if src_date else ""
+                txt_research_lines.append(f"{idx}. {src_title}: {src_url}{date_txt}")
+        elif not research.get("success"):
+            err_msg = research.get("error") or "Não informada"
+            txt_research_lines.append(f"Pesquisa externa esteve indisponível durante a geração: {err_msg}")
+            txt_research_lines.append("A estratégia foi elaborada com base nas informações do briefing.")
+        else:
+            txt_research_lines.append("Nenhuma fonte externa consultada para esta campanha.")
+    else:
+        txt_research_lines.append("Pesquisa externa de mercado não registrada para esta execução.")
 
     # 2. Relatório em Texto Puro (.txt)
     txt_lines = [
@@ -171,6 +242,10 @@ def build_campaign_reports(campaign_data: dict) -> tuple[str, str]:
         f"CTA Desejada: {form.get('cta', 'Não especificada')}",
         f"Canais: {', '.join(form.get('channels', []))}",
         "",
+    ]
+    txt_lines.extend(txt_research_lines)
+    txt_lines.extend([
+        "",
         "-" * 70,
         "[2. ESTRATÉGIA DE MARKETING (AGENTE 1 — ESTRATEGISTA)]",
         "-" * 70,
@@ -186,17 +261,35 @@ def build_campaign_reports(campaign_data: dict) -> tuple[str, str]:
         "-" * 70,
         review,
         "",
-        "=" * 70,
-        "[5. AVISO ÉTICO E LEGAL]",
-        "=" * 70,
-        "AVISO IMPORTANTE: Os textos e análises contidos neste relatório foram",
+    ])
+
+    if image_prompts:
+        txt_lines.extend([
+            "-" * 70,
+            "[5. DIREÇÃO VISUAL E PROMPTS DE IMAGEM (AGENTE 4 — DESIGNER DE PROMPTS)]",
+            "-" * 70,
+            image_prompts,
+            "",
+            "=" * 70,
+            "[6. AVISO ÉTICO E LEGAL]",
+            "=" * 70,
+        ])
+    else:
+        txt_lines.extend([
+            "=" * 70,
+            "[5. AVISO ÉTICO E LEGAL]",
+            "=" * 70,
+        ])
+
+    txt_lines.extend([
+        "AVISO IMPORTANTE: Os textos, análises e sugestões visuais contidos neste relatório foram",
         "elaborados por sistemas de Inteligência Artificial Generativa.",
         "A análise de SEO possui caráter estritamente orientativo e não garante",
         "posicionamento em buscas ou resultados comerciais.",
         "Todos os conteúdos devem passar por criteriosa revisão humana antes",
         "de qualquer veiculação comercial.",
         "=" * 70
-    ]
+    ])
     report_txt = "\n".join(txt_lines)
 
     return report_md, report_txt
