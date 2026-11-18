@@ -79,7 +79,8 @@ def send_campaign_to_n8n(
     product_name: str,
     objective: str,
     channels: list[str],
-    report_markdown: str
+    report_markdown: str,
+    is_demo: bool = False
 ) -> dict[str, Any]:
     """
     Dispara o webhook do n8n com o contrato de dados oficial:
@@ -92,6 +93,7 @@ def send_campaign_to_n8n(
 
     Possui validacao rigorosa de dados de entrada, status HTTP e JSON de resposta,
     com protecao contra retentativas automaticas em caso de timeout.
+    Bloqueia categoricamente envios no Modo Demonstracao ou com dados ficticios.
     """
     # 1. Validacao rigorosa dos dados de entrada
     if not product_name or not str(product_name).strip():
@@ -117,6 +119,19 @@ def send_campaign_to_n8n(
             "success": False,
             "uncertain": False,
             "message": "O relatório da campanha em Markdown está vazio ou indisponível."
+        }
+
+    # 2. Bloqueio categorico de envio no Modo Demonstracao
+    if (
+        is_demo
+        or "resultados pré-carregados" in str(report_markdown).lower()
+        or "modo demonstração" in str(report_markdown).lower()
+    ):
+        return {
+            "success": False,
+            "uncertain": False,
+            "is_blocked_by_demo": True,
+            "message": "Operação bloqueada com segurança: No Modo Demonstração, os envios externos ao n8n, ao Gmail e ao Google Sheets estão desativados."
         }
 
     webhook_url, webhook_token = _get_webhook_credentials()

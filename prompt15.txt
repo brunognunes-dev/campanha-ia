@@ -1,0 +1,813 @@
+# MARKETFLOW AI 2.0 — IMPLEMENTAÇÃO INTEGRAL DO MODO DEMONSTRAÇÃO, TESTES, PUSH E PREPARAÇÃO PARA DEPLOY
+
+## 1. PAPEL E OBJETIVO
+
+Atue como Engenheiro de Software Sênior, Arquiteto Python/Streamlit, Especialista em Sistemas Multiagentes, Git/GitHub e Deploy no Streamlit Community Cloud.
+
+Você está trabalhando no projeto existente MarketFlow AI 2.0.
+
+Sua tarefa é executar um único fluxo de trabalho para:
+
+1. Implementar um Modo Demonstração completo e offline.
+2. Simular visualmente a execução dos quatro agentes especializados.
+3. Apresentar resultados fictícios completos e coerentes.
+4. Preservar todas as funcionalidades reais.
+5. Testar a implementação.
+6. Verificar que nenhuma credencial será exposta.
+7. Criar um commit seguro.
+8. Realizar o push para a branch de desenvolvimento, se todas as condições forem atendidas.
+9. Preparar e, quando possível e autorizado, atualizar a aplicação 2.0 no Streamlit Community Cloud.
+
+O projeto será utilizado em uma apresentação acadêmica e precisa demonstrar claramente suas funcionalidades sem depender de chamadas externas.
+
+**IMPORTANTE: este não é um pedido para reconstruir o sistema, mas para acrescentar um modo de demonstração isolado, seguro, visualmente integrado e plenamente funcional.**
+
+---
+
+# 2. CONTEXTO DO PROJETO
+
+Repositório:
+
+https://github.com/brunognunes-dev/campanha-ia
+
+Branch de desenvolvimento:
+
+`feature/marketflow-v2`
+
+Branch de produção:
+
+`main`
+
+A branch main contém a versão 1.0 e NÃO PODE SER ALTERADA.
+
+A versão 2.0 utiliza:
+
+- Python
+- Streamlit
+- OpenRouter
+- Tavily Search API
+- LangGraph
+- Quatro agentes especializados
+- Guardrails
+- n8n
+- Gmail
+- Google Sheets
+
+Agentes existentes:
+
+1. Pesquisador de Tendências e Estrategista.
+2. Copywriter Multicanal.
+3. Revisor e Especialista em SEO.
+4. Designer de Prompts de Imagem.
+
+O fluxo real utiliza modelos de IA por meio do OpenRouter.
+
+Entretanto, os limites de requisições dos modelos gratuitos podem impedir uma apresentação ao vivo.
+
+A solução é permitir uma demonstração offline com conteúdos fictícios previamente preparados.
+
+---
+
+# 3. REGRAS INEGOCIÁVEIS
+
+1. Nunca modificar a branch main.
+2. Nunca alterar a aplicação 1.0 publicada.
+3. Nunca remover ou substituir a geração real de campanhas.
+4. Nunca alterar desnecessariamente os prompts ou a orquestração LangGraph.
+5. Nunca modificar o workflow de produção do n8n.
+6. Nunca enviar e-mails durante a demonstração.
+7. Nunca registrar campanhas fictícias no Google Sheets.
+8. Nunca consumir APIs externas durante a demonstração.
+9. Nunca utilizar credenciais reais como dados de exemplo.
+10. Nunca afirmar que uma LLM foi executada quando foram carregados dados fictícios.
+11. Nunca apresentar pesquisas inventadas como pesquisas reais da Tavily.
+12. Nunca permitir que a simulação acione automações externas.
+13. Preservar integralmente o layout dark premium.
+14. Não adicionar novas dependências sem necessidade.
+15. Não realizar deploy ou push se testes e verificações de segurança falharem.
+
+---
+
+# 4. ETAPA 1 — INSPEÇÃO DO PROJETO
+
+Antes de implementar, inspecione a estrutura atual.
+
+Arquivos de interesse:
+
+- app.py
+- agents.py
+- prompts.py
+- graph_orchestrator.py
+- ui_components.py
+- guardrails.py
+- automation_service.py
+- openrouter_service.py
+- research_service.py
+- requirements.txt
+- .gitignore
+
+Descubra:
+
+1. Como o Streamlit gerencia session_state.
+2. Como a campanha completa é representada internamente.
+3. Como os estados dos agentes são armazenados.
+4. Como os resultados aparecem nas abas.
+5. Como os relatórios Markdown e TXT são gerados.
+6. Como os guardrails são apresentados.
+7. Como o envio para n8n é acionado.
+8. Como a interface controla autenticação.
+9. Quais arquivos de teste existem.
+10. Como as credenciais são lidas.
+
+Não presuma nomes de variáveis, formatos ou contratos que não existam no código atual.
+
+Adapte a implementação à arquitetura real.
+
+---
+
+# 5. ETAPA 2 — CRIAR UM SERVIÇO ÚNICO DE DEMONSTRAÇÃO
+
+Crie um módulo isolado:
+
+`demo_service.py`
+
+Esse módulo será o responsável por preparar e disponibilizar todos os dados da simulação.
+
+Sua implementação deverá ser independente de OpenRouter, Tavily e n8n.
+
+Não será necessário construir uma segunda aplicação.
+
+Reutilize a aplicação Streamlit existente.
+
+## Responsabilidades
+
+O módulo deverá:
+
+- Preparar uma campanha fictícia completa.
+- Fornecer os resultados dos quatro agentes.
+- Fornecer dados de pesquisa claramente ilustrativos.
+- Disponibilizar a versão preliminar dos textos.
+- Disponibilizar a revisão e a versão final completa.
+- Disponibilizar os prompts textuais de imagem.
+- Fornecer dados compatíveis com as estruturas reais utilizadas pela aplicação.
+- Permitir gerar relatórios Markdown e TXT.
+- Identificar explicitamente que os conteúdos são fictícios e pré-carregados.
+
+Evite lógica duplicada e aproveite funções locais já existentes.
+
+---
+
+# 6. ETAPA 3 — CAMPANHA FICTÍCIA COMPLETA
+
+Utilize o seguinte cenário como padrão da demonstração.
+
+## Empresa
+
+Café Aurora.
+
+## Natureza
+
+Cafeteria inteiramente fictícia, localizada em Fortaleza, Ceará.
+
+## Campanha
+
+"Sua Pausa Especial".
+
+## Produto ou serviço
+
+Cafeteria especializada em cafés artesanais, cappuccinos, bebidas geladas e acompanhamentos frescos.
+
+## Objetivo
+
+Aumentar o reconhecimento da marca, atrair novos clientes e incentivar visitas presenciais.
+
+## Público-alvo
+
+Jovens adultos, estudantes universitários e profissionais de 20 a 45 anos interessados em cafés especiais e experiências gastronômicas.
+
+## Tom de comunicação
+
+Acolhedor, moderno, natural, convidativo e criativo.
+
+## Diferenciais
+
+- Bebidas preparadas na hora.
+- Opções quentes e geladas.
+- Ambiente confortável.
+- Atendimento atencioso.
+- Espaço apropriado para encontros e momentos de pausa.
+
+## Canais
+
+- Instagram.
+- WhatsApp.
+- E-mail marketing.
+
+## Restrições
+
+Não inventar:
+
+- Preços.
+- Descontos.
+- Horários de funcionamento.
+- Endereço específico.
+- Avaliações de clientes.
+- Certificações.
+- Promoções inexistentes.
+- Alegações médicas.
+- Benefícios garantidos.
+
+Todos os textos devem ser completos e coerentes.
+
+---
+
+# 7. ETAPA 4 — CONTEÚDO DO PRIMEIRO AGENTE
+
+Simule o resultado do Pesquisador de Tendências e Estrategista.
+
+A saída deverá conter:
+
+1. Resumo do briefing.
+2. Objetivo da campanha.
+3. Análise do público-alvo.
+4. Posicionamento sugerido.
+5. Proposta de valor.
+6. Tom de comunicação.
+7. Mensagem principal.
+8. Estratégia por canal.
+9. Recomendações de comunicação.
+10. Limitações da análise.
+
+A estratégia deverá ser realista e bem organizada.
+
+Como o modo é offline, NÃO invente URLs ou resultados da Tavily.
+
+Na interface, utilize uma identificação semelhante a:
+
+"Pesquisa ilustrativa — Modo Demonstração. Nenhuma consulta externa foi realizada."
+
+Se desejar apresentar tendências, identifique-as como hipóteses ou exemplos ilustrativos, não como fatos pesquisados em tempo real.
+
+Não utilize o indicador "Pesquisa em tempo real" para conteúdos fictícios.
+
+---
+
+# 8. ETAPA 5 — CONTEÚDO DO SEGUNDO AGENTE
+
+Simule o resultado do Copywriter.
+
+Ele deverá produzir uma primeira versão completa de campanha para os três canais.
+
+## Instagram
+
+Inclua:
+
+- Gancho.
+- Legenda.
+- CTA.
+- Hashtags.
+
+## WhatsApp
+
+Inclua:
+
+- Mensagem natural.
+- Contextualização.
+- Convite.
+- CTA.
+
+## E-mail
+
+Inclua:
+
+- Assunto.
+- Preheader.
+- Saudação.
+- Corpo completo.
+- CTA.
+- Encerramento.
+
+Os textos dos canais deverão ser diferentes entre si.
+
+Evite reaproveitar a mesma mensagem sem adaptação.
+
+Não utilize placeholders.
+
+---
+
+# 9. ETAPA 6 — CONTEÚDO DO TERCEIRO AGENTE
+
+Simule o resultado do Revisor e Especialista em SEO.
+
+A saída deverá conter obrigatoriamente DUAS PARTES.
+
+## Parte A — Diagnóstico
+
+Identifique algumas melhorias plausíveis no conteúdo preliminar:
+
+- Gancho do Instagram.
+- Clareza de mensagem.
+- Naturalidade do WhatsApp.
+- Organização do e-mail.
+- CTA.
+- Escolha de palavras-chave.
+- Coerência entre os canais.
+
+## Parte B — VERSÕES FINAIS CORRIGIDAS
+
+Entregue a versão final completa de:
+
+1. Instagram.
+2. WhatsApp.
+3. E-mail.
+
+As correções sugeridas na Parte A devem aparecer efetivamente aplicadas na Parte B.
+
+Não entregue apenas comentários.
+
+Não deixe trechos em aberto.
+
+Não utilize expressões como "adicione aqui", "continue o texto" ou "reescrever mensagem".
+
+A versão final deverá ser suficientemente completa para ser demonstrada como uma campanha pronta para revisão humana.
+
+---
+
+# 10. ETAPA 7 — CONTEÚDO DO QUARTO AGENTE
+
+Simule o resultado do Designer de Prompts de Imagem.
+
+IMPORTANTE:
+
+Esse agente gera prompts textuais para ferramentas de geração de imagem.
+
+Ele NÃO renderiza imagens diretamente.
+
+Produza três propostas visuais.
+
+## Instagram
+
+Criar prompt em inglês para uma imagem publicitária de café artesanal, com ambiente aconchegante, composição atraente e formato apropriado para Instagram.
+
+## WhatsApp
+
+Criar prompt em inglês para uma peça visual simples e convidativa, com destaque para a bebida e composição adequada para compartilhamento.
+
+## E-mail
+
+Criar prompt em inglês para um banner horizontal de divulgação da campanha.
+
+Cada proposta deverá incluir:
+
+- Canal.
+- Objetivo.
+- Conceito visual.
+- Aspect ratio.
+- Prompt completo em inglês.
+- Orientações de composição em português.
+- Elementos a evitar.
+
+Os resultados deverão aparecer na aba do quarto agente.
+
+Não utilize imagens externas nem adicione chamadas a geradores visuais.
+
+---
+
+# 11. ETAPA 8 — SIMULAÇÃO VISUAL DO WORKFLOW
+
+Na interface do Streamlit, crie uma seção identificada como:
+
+"MODO DEMONSTRAÇÃO"
+
+Inclua um botão principal:
+
+"▶ Iniciar demonstração"
+
+O comportamento esperado será:
+
+1. Carregar o briefing fictício.
+2. Exibir a etapa do Pesquisador/Estrategista.
+3. Exibir o resultado ilustrativo da estratégia.
+4. Avançar para o Copywriter.
+5. Exibir os textos preliminares.
+6. Avançar para o Revisor SEO.
+7. Exibir diagnóstico e versões finais.
+8. Avançar para o Designer de Prompts.
+9. Exibir os prompts visuais.
+10. Apresentar a validação local dos guardrails.
+11. Exibir os relatórios finais.
+
+A demonstração deverá permitir acompanhar o fluxo de maneira didática.
+
+Pode utilizar controles de avanço entre as etapas, caso isso ofereça uma apresentação mais estável do que animações automáticas.
+
+Caso utilize animações ou indicadores de progresso, identifique explicitamente que são uma REPRODUÇÃO ILUSTRATIVA do fluxo.
+
+Não faça chamadas reais a modelos de IA.
+
+Não simule requisições HTTP.
+
+Não tente reproduzir tempos reais de execução.
+
+Não marque os agentes como "executados pela IA" quando apenas carregar resultados estáticos.
+
+Utilize rótulos como:
+
+"Exemplo do Agente 1 carregado"
+
+"Exemplo do Agente 2 carregado"
+
+"Exemplo do Agente 3 carregado"
+
+"Exemplo do Agente 4 carregado"
+
+O objetivo é mostrar visualmente o funcionamento conceitual da arquitetura.
+
+---
+
+# 12. ETAPA 9 — PRESERVAR O MODO REAL
+
+A aplicação deverá continuar oferecendo geração real de campanhas.
+
+Crie uma separação clara entre:
+
+## Modo Real
+
+Utiliza:
+
+- OpenRouter.
+- Tavily.
+- LangGraph.
+- Agentes reais.
+- Guardrails.
+- Automação, quando autorizada.
+
+## Modo Demonstração
+
+Utiliza:
+
+- Dados fictícios locais.
+- Resultados pré-carregados.
+- Interface existente.
+- Relatórios fictícios.
+- Nenhuma API externa.
+
+Os estados de um modo não devem contaminar o outro.
+
+Ao retornar ao Modo Real:
+
+- Limpe ou isole os resultados fictícios.
+- Não reutilize dados da demonstração.
+- Preserve o funcionamento normal da aplicação.
+
+Ao entrar no Modo Demonstração:
+
+- Não dispare a geração real.
+- Não reutilize resultados reais anteriores como se fossem fictícios.
+- Não solicite credenciais das APIs externas para carregar os exemplos.
+
+Preserve o controle de acesso existente. Não introduza um caminho que permita contornar a autenticação da aplicação.
+
+---
+
+# 13. ETAPA 10 — BLOQUEIO DAS AUTOMAÇÕES
+
+Enquanto o Modo Demonstração estiver ativo:
+
+- Desabilitar o botão de envio para revisão.
+- Impedir chamadas ao n8n.
+- Impedir envio pelo Gmail.
+- Impedir registros no Google Sheets.
+- Impedir requisições ao OpenRouter.
+- Impedir requisições à Tavily.
+
+Não dependa apenas de desabilitar visualmente um botão.
+
+Garanta que a lógica de execução também bloqueie essas operações.
+
+Nenhum conteúdo fictício deve ser enviado acidentalmente para serviços externos.
+
+A automação real deverá voltar ao funcionamento normal quando o usuário sair do Modo Demonstração.
+
+---
+
+# 14. ETAPA 11 — GUARDRAILS
+
+Sempre que possível, utilize o validador determinístico local já existente para verificar os dados fictícios.
+
+Se a validação local puder ser executada sem serviços externos, execute-a.
+
+Se precisar utilizar um resultado de exemplo, identifique-o como ilustrativo.
+
+Não apresente uma aprovação fictícia como se fosse resultado de uma verificação real.
+
+A campanha de demonstração deverá evitar conteúdo que gere bloqueios críticos indevidos.
+
+---
+
+# 15. ETAPA 12 — RELATÓRIOS
+
+Permita baixar:
+
+- Relatório Markdown.
+- Relatório TXT.
+
+Esses documentos deverão conter:
+
+1. Identificação de demonstração.
+2. Briefing fictício.
+3. Estratégia.
+4. Pesquisa ilustrativa, claramente identificada.
+5. Conteúdos preliminares.
+6. Diagnóstico do Revisor.
+7. Textos finais completos.
+8. Prompts de imagem.
+9. Resultado dos guardrails, com identificação correta da origem.
+
+Inclua no início:
+
+"DEMONSTRAÇÃO — CAMPANHA FICTÍCIA — RESULTADOS PRÉ-CARREGADOS"
+
+Não gere relatórios incompletos.
+
+---
+
+# 16. ETAPA 13 — TESTES AUTOMATIZADOS
+
+Crie testes com unittest ou utilize o framework já adotado no projeto.
+
+Teste obrigatoriamente:
+
+1. Carregamento da campanha fictícia.
+2. Presença dos quatro agentes.
+3. Existência dos três canais.
+4. Conteúdo completo para Instagram.
+5. Conteúdo completo para WhatsApp.
+6. Conteúdo completo para E-mail.
+7. Diagnóstico SEO.
+8. Versões finais completas.
+9. Três prompts visuais completos.
+10. Estrutura dos relatórios.
+11. Alternância entre modo real e demonstração.
+12. Ausência de chamadas ao OpenRouter.
+13. Ausência de chamadas à Tavily.
+14. Ausência de chamadas ao n8n.
+15. Bloqueio de envio no modo demonstração.
+16. Preservação do modo real.
+17. Preservação da autenticação.
+18. Estado correto do Streamlit após recarregar a página.
+
+Utilize mocks para os serviços externos.
+
+Não consuma créditos reais.
+
+Não envie e-mails.
+
+Não execute webhooks reais.
+
+Execute também os testes existentes de agentes, LangGraph, guardrails e robustez.
+
+Não remova testes legítimos para obter aprovação.
+
+Corrija eventuais regressões introduzidas por esta implementação.
+
+---
+
+# 17. ETAPA 14 — AUDITORIA DE SEGURANÇA
+
+Antes de preparar o commit:
+
+1. Confirme que a branch atual é `feature/marketflow-v2`.
+2. Inspecione `git status`.
+3. Verifique arquivos modificados.
+4. Verifique arquivos não rastreados.
+5. Confira `.gitignore`.
+6. Confirme que `.streamlit/secrets.toml` não está versionado.
+7. Confirme que `.env` e outras configurações privadas estão protegidos.
+8. Verifique possíveis API Keys e tokens.
+9. Inspecione o histórico a publicar para identificar segredos.
+10. Não exiba credenciais no relatório.
+
+Existe histórico anterior de um bloqueio do GitHub Push Protection relacionado a uma chave do OpenRouter.
+
+Não reintroduza commits que contenham credenciais.
+
+Não utilize links para desbloquear segredos reais.
+
+Se encontrar uma chave comprometida, interrompa a publicação e informe a necessidade de revogação.
+
+---
+
+# 18. ETAPA 15 — PREPARAÇÃO E COMMIT
+
+Depois que todos os testes forem aprovados:
+
+Execute as verificações de Git necessárias.
+
+Confira:
+
+- Branch atual.
+- Arquivos modificados.
+- Arquivos preparados para commit.
+- Ausência de credenciais.
+- Ausência de arquivos temporários.
+- Ausência de modificações indesejadas.
+
+Não utilize `git add .` indiscriminadamente.
+
+Inclua somente os arquivos relacionados à implementação.
+
+Crie um commit descritivo:
+
+`feat: adiciona modo demonstracao offline ao MarketFlow AI 2.0`
+
+Se o commit não puder ser realizado com segurança, informe a pendência.
+
+Não modifique a main.
+
+---
+
+# 19. ETAPA 16 — PUSH PARA O GITHUB
+
+O objetivo é atualizar exclusivamente:
+
+`feature/marketflow-v2`
+
+Execute primeiro:
+
+`git fetch origin`
+
+Verifique se a branch local está sincronizada com a remota.
+
+Se for possível um push normal e seguro, execute:
+
+`git push -u origin feature/marketflow-v2`
+
+Se houver divergência, NÃO execute automaticamente:
+
+- git push --force
+- git reset --hard
+- git pull com merge não revisado
+
+Caso seja necessário reescrever histórico ou utilizar `--force-with-lease`, interrompa a operação e explique exatamente o motivo.
+
+Não substitua commits remotos importantes.
+
+Não faça merge com main.
+
+Verifique o resultado real do push.
+
+Não declare sucesso se o GitHub rejeitar a operação.
+
+---
+
+# 20. ETAPA 17 — PREPARAR O DEPLOY NO STREAMLIT COMMUNITY CLOUD
+
+Depois do push bem-sucedido, prepare a atualização da aplicação MarketFlow AI 2.0.
+
+Repositório:
+
+`brunognunes-dev/campanha-ia`
+
+Branch:
+
+`feature/marketflow-v2`
+
+Arquivo principal:
+
+`app.py`
+
+Verifique:
+
+1. requirements.txt.
+2. Compatibilidade das versões das bibliotecas.
+3. Imports e dependências.
+4. Compatibilidade com o Streamlit Cloud.
+5. Arquivos necessários para o Modo Demonstração.
+6. Caminhos relativos.
+7. Funcionamento com reinicialização da sessão.
+8. Ausência de dependência de arquivos locais não versionados.
+9. Ausência de credenciais embutidas.
+10. Preservação dos Secrets da versão real.
+
+O Modo Demonstração deverá funcionar mesmo quando não houver chaves do OpenRouter ou Tavily configuradas, desde que a autenticação existente da aplicação seja respeitada.
+
+Não exponha chaves nos logs.
+
+Não modifique Secrets de produção.
+
+Não modifique a aplicação 1.0.
+
+Se já existir uma aplicação Streamlit Cloud apontando para a branch `feature/marketflow-v2`, confirme se o push desencadeou a atualização e verifique o resultado, caso tenha acesso autorizado.
+
+Se ainda não existir uma aplicação da versão 2.0, prepare os dados necessários para criá-la:
+
+Repository:
+`brunognunes-dev/campanha-ia`
+
+Branch:
+`feature/marketflow-v2`
+
+Main file:
+`app.py`
+
+Nome sugerido:
+`marketflow-ai-v2-dev`
+
+Caso não exista acesso autenticado ao Streamlit Cloud, NÃO alegue que o deploy foi realizado.
+
+Nesse cenário, informe que o projeto está pronto para deploy e forneça o passo a passo exato para concluir a publicação manualmente.
+
+Se possuir integração autorizada e capacidade real de executar o deploy, utilize somente o ambiente separado da versão 2.0.
+
+Nunca altere o deploy 1.0.
+
+---
+
+# 21. ETAPA 18 — VERIFICAÇÃO FINAL
+
+Execute uma validação final de ponta a ponta em ambiente local, sem acessar APIs externas.
+
+Comprove que o usuário consegue:
+
+1. Abrir o MarketFlow AI.
+2. Selecionar Modo Demonstração.
+3. Iniciar a apresentação fictícia.
+4. Acompanhar os quatro agentes.
+5. Visualizar os resultados.
+6. Ler os textos finais completos.
+7. Visualizar os prompts de imagem.
+8. Consultar os guardrails.
+9. Baixar o relatório.
+10. Retornar ao Modo Real.
+
+Verifique que nenhuma requisição foi enviada ao OpenRouter, Tavily ou n8n durante o teste.
+
+Caso o deploy 2.0 esteja acessível, valide também a abertura da aplicação na URL publicada.
+
+---
+
+# 22. RELATÓRIO FINAL OBRIGATÓRIO
+
+Apresente um relatório organizado contendo:
+
+## Implementação
+
+Arquivos criados e modificados.
+
+## Modo Demonstração
+
+Funcionamento e conteúdo disponível.
+
+## Segurança
+
+Confirmação das verificações de credenciais e ausência de chamadas externas no modo demonstração.
+
+## Testes
+
+Quantidade de testes executados, aprovados e falhos.
+
+## GitHub
+
+- Branch utilizada.
+- Commit criado.
+- Resultado do push.
+- Confirmação de sincronização remota.
+
+## Streamlit Cloud
+
+Indique uma das situações:
+
+- Deploy atualizado e verificado.
+- Pronto para deploy manual.
+- Deploy bloqueado, com motivo.
+
+## Instruções de uso
+
+Explique como iniciar o Modo Demonstração e como retornar à geração real.
+
+## Pendências
+
+Apresente qualquer limitação não resolvida.
+
+---
+
+# 23. INSTRUÇÃO FINAL
+
+Execute este trabalho como uma implementação única e integrada, sem solicitar que eu envie prompts adicionais para cada etapa.
+
+Não interrompa por detalhes que possam ser resolvidos com inspeção do código.
+
+Não invente resultados.
+
+Não simule sucesso em testes, GitHub ou deploy.
+
+Não comprometa a aplicação real.
+
+Não realize ações destrutivas no Git.
+
+Não publique conteúdos com credenciais.
+
+Priorize uma demonstração confiável, visualmente organizada e gratuita.
+
+**RESULTADO ESPERADO: MARKETFLOW AI 2.0 COM MODO DEMONSTRAÇÃO OFFLINE FUNCIONAL, TESTADO, COMMITADO, ENVIADO À BRANCH DE DESENVOLVIMENTO E PREPARADO PARA DEPLOY NO STREAMLIT CLOUD, SEM ALTERAR A VERSÃO 1.0.**

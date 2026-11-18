@@ -182,19 +182,29 @@ def inject_custom_css():
     )
 
 
-def render_app_header():
+def render_app_header(is_demo: bool = False):
     """Renderiza o cabecalho premium do MarketFlow AI."""
+    demo_badge = (
+        '<span class="badge-pill badge-pill-cyan">🎭 Modo Demonstração (100% Offline)</span>'
+        if is_demo else
+        '<span class="badge-pill">✨ Pipeline Multiagente (4 Agentes de IA)</span>'
+    )
+    demo_desc = (
+        "Demonstração interativa pré-carregada para apresentação acadêmica e testes sem consumo de APIs externas."
+        if is_demo else
+        "Crie, otimize e automatize campanhas de marketing com inteligência artificial. "
+        "Transforme briefings brutos em campanhas completas com estratégia, copy persuasivo e automação de entrega."
+    )
     st.markdown(
-        """
+        f"""
         <div>
             <div class="brand-subtitle">Intelligent Marketing Campaign Studio</div>
-            <div class="brand-title">MarketFlow AI</div>
+            <div class="brand-title">MarketFlow AI 2.0</div>
             <p class="brand-description">
-                Crie, otimize e automatize campanhas de marketing com inteligência artificial.
-                Transforme briefings brutos em campanhas completas com estratégia, copy persuasivo e automação de entrega.
+                {demo_desc}
             </p>
             <div>
-                <span class="badge-pill">✨ Pipeline Multiagente (4 Agentes de IA)</span>
+                {demo_badge}
                 <span class="badge-pill badge-pill-cyan">🌐 Pesquisa Web / Tavily API</span>
                 <span class="badge-pill badge-pill-cyan">⚡ Automação n8n &amp; Gmail</span>
                 <span class="badge-pill">🔒 Header Auth &amp; Secrets Seguros</span>
@@ -206,14 +216,15 @@ def render_app_header():
     st.divider()
 
 
-def render_sidebar(authenticated: bool = True):
-    """Renderiza a barra lateral com identidade e navegacao do estudio."""
+def render_sidebar(authenticated: bool = True, current_mode: str = "real") -> str:
+    """Renderiza a barra lateral com identidade, selecao de modo e navegacao do estudio."""
+    selected_mode = current_mode
     with st.sidebar:
         st.markdown(
             """
-            <div style="text-align: left; padding-bottom: 1rem;">
+            <div style="text-align: left; padding-bottom: 0.8rem;">
                 <h2 style="margin:0; font-size: 1.4rem; font-weight:800; background: linear-gradient(135deg, #F8FAFC, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                    MarketFlow AI
+                    MarketFlow AI 2.0
                 </h2>
                 <div style="color: #A78BFA; font-size: 0.78rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">
                     Campaign Studio
@@ -222,6 +233,28 @@ def render_sidebar(authenticated: bool = True):
             """,
             unsafe_allow_html=True
         )
+
+        st.markdown(
+            """
+            <div style="margin-bottom: 0.35rem;">
+                <span style="font-size: 0.75rem; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em;">
+                    🎛️ Modo de Execução
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        mode_idx = 0 if current_mode == "real" else 1
+        chosen_mode = st.radio(
+            "Modo de Operação:",
+            options=["🚀 Modo Real (IA Generativa)", "🎭 Modo Demonstração (Offline)"],
+            index=mode_idx,
+            label_visibility="collapsed",
+            key="sidebar_mode_selector"
+        )
+        selected_mode = "real" if "Modo Real" in chosen_mode else "demo"
+
+        st.markdown("---")
 
         st.markdown(
             """
